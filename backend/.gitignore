@@ -44,4 +44,4 @@ coverage/
 .DS_Store
 Thumbs.db
 
-/src/generated/prisma
+/src/generated
