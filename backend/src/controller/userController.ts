@@ -120,3 +120,50 @@ export async function register(req: Request, res: Response) {
     });
   }
 }
+
+export async function googleLogin(req: Request, res: Response) {
+  try {
+    const { email, name } = req.body;
+    if (!email) {
+      return res.status(400).send({
+        msg: "Email is required",
+        success: false,
+      });
+    }
+
+    // 1. Check if user exists
+    let user = await prisma.user.findFirst({
+      where: { email: email.trim() },
+    });
+
+    // 2. If not, create a new user (with an empty password)
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email: email.trim(),
+          name: name ? name.trim() : "Google User",
+          password: "", // User authenticated via Google, so no password
+        },
+      });
+    }
+
+    // 3. Generate backend JWT
+    const token = jwt.sign(
+      { id: user.id, email: user.email },
+      process.env.JWT_SECRET || "ddd",
+      { expiresIn: "70000s" },
+    );
+
+    return res.status(200).send({
+      msg: "Google login successful",
+      success: true,
+      token,
+      user: { id: user.id, email: user.email, name: user.name },
+    });
+  } catch (error) {
+    return res.status(500).send({
+      msg: "Internal Server Error " + error,
+      success: false,
+    });
+  }
+}

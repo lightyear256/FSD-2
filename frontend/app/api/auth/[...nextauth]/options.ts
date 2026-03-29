@@ -1,4 +1,5 @@
 import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
 import { NextAuthOptions } from "next-auth";
 
 export const authOptions: NextAuthOptions = {
@@ -7,9 +8,92 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
+
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
+
+        try {
+          const res = await fetch("http://localhost:5000/user/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: credentials.email,
+              password: credentials.password,
+            }),
+          });
+
+          const data = await res.json();
+
+          if (res.ok && data.success && data.token) {
+            return {
+              id: data.user?.id ?? "unknown",
+              backendToken: data.token,
+            };
+          }
+        } catch (error) {
+          console.error("Login failed:", error);
+        }
+
+        return null;
+      },
+    }),
   ],
 
   session: {
     strategy: "jwt",
+  },
+
+  callbacks: {
+    async jwt({ token, user, account }) {
+      // First login
+      if (user) {
+        token.id = user.id;
+
+        if ("backendToken" in user) {
+          token.backendToken = user.backendToken as string;
+        }
+      }
+
+      if (account?.provider === "google" && !token.backendToken) {
+        try {
+          const res = await fetch("http://localhost:5000/user/google-login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              // you may need email from token
+              email: token.email,
+              name: token.name,
+            }),
+          });
+
+          const data = await res.json();
+
+          if (res.ok && data.token) {
+            token.backendToken = data.token;
+          }
+        } catch (err) {
+          console.error("Google backend login failed:", err);
+        }
+      }
+
+      return token;
+    },
+
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+      }
+
+      session.backendToken = token.backendToken as string;
+
+      return session;
+    },
   },
 };
