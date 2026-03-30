@@ -8,15 +8,14 @@ import {
   getMessages,
   sendMessage,
 } from "../controller/roomController.js";
-import { authMiddleware } from "../middleware/authMiddleware.js"
-
+import authMiddleware from "../middleware/authMiddleware.js"
 
 export const roomRouter = Router();
 
 roomRouter.use(authMiddleware);
 
-roomRouter.post("/join", createRoom);
-roomRouter.post("/create", joinRoom);
+roomRouter.post("/create", createRoom);
+roomRouter.post("/join", joinRoom);
 roomRouter.post("/leave", leaveRoom);
 
 roomRouter.get("/:id", getRoom);
