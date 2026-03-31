@@ -5,26 +5,28 @@ import { useSocket } from "../app/context/SocketContext";
 
 const ICE_SERVERS: RTCIceServer[] = [
   {
-    urls: [
-      "stun:stun1.l.google.com:19302",
-      "stun:stun2.l.google.com:19302",
-    ],
-  },
-  {
-    urls: "turn:openrelay.metered.ca:80",
-    username: "openrelayproject",
-    credential: "openrelayproject",
-  },
-  {
-    urls: "turn:openrelay.metered.ca:443",
-    username: "openrelayproject",
-    credential: "openrelayproject",
-  },
-  {
-    urls: "turn:openrelay.metered.ca:443?transport=tcp",
-    username: "openrelayproject",
-    credential: "openrelayproject",
-  },
+        urls: "stun:stun.relay.metered.ca:80",
+      },
+      {
+        urls: "turn:global.relay.metered.ca:80",
+        username: "5d789d78b7cf4af75fbcb7d5",
+        credential: "trXPryZNWzpstmFz",
+      },
+      {
+        urls: "turn:global.relay.metered.ca:80?transport=tcp",
+        username: "5d789d78b7cf4af75fbcb7d5",
+        credential: "trXPryZNWzpstmFz",
+      },
+      {
+        urls: "turn:global.relay.metered.ca:443",
+        username: "5d789d78b7cf4af75fbcb7d5",
+        credential: "trXPryZNWzpstmFz",
+      },
+      {
+        urls: "turns:global.relay.metered.ca:443?transport=tcp",
+        username: "5d789d78b7cf4af75fbcb7d5",
+        credential: "trXPryZNWzpstmFz",
+      },
 ];
 
 export function useWebRTC(roomId: string, userId: string) {
@@ -66,10 +68,10 @@ export function useWebRTC(roomId: string, userId: string) {
   }, []);
 
   const createPeerConnection = useCallback(
-    (stream: MediaStream): RTCPeerConnection => {
+    (stream: MediaStream, iceServers: RTCIceServer[]): RTCPeerConnection => {
       closePeerConnection();
 
-      const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+      const pc = new RTCPeerConnection({ iceServers });
 
       pc.onicecandidate = (event) => {
         if (event.candidate) {
@@ -115,6 +117,18 @@ export function useWebRTC(roomId: string, userId: string) {
     let mounted = true;
 
     const setup = async () => {
+      let iceServers: RTCIceServer[] = [];
+      try {
+        const iceRes = await fetch(
+          `https://5d789d78b7cf4af75fbcb7d5.metered.ca/api/v1/turn/credentials?apiKey=${process.env.NEXT_PUBLIC_METERED_API_KEY}`
+        );
+        iceServers = await iceRes.json();
+      } catch (err) {
+        console.error("Failed to fetch ICE servers, falling back:", err);
+        // Fallback in case fetch fails
+        iceServers = [{ urls: "stun:stun.l.google.com:19302" }];
+      }
+
       // Step 1: acquire media first
       let stream: MediaStream;
       try {
@@ -148,7 +162,7 @@ export function useWebRTC(roomId: string, userId: string) {
 
       const handleReady = async () => {
         console.log("'ready' — creating offer");
-        const pc = createPeerConnection(stream);
+        const pc = createPeerConnection(stream, iceServers);
         try {
           const offer = await pc.createOffer();
           await pc.setLocalDescription(offer);
@@ -164,7 +178,7 @@ export function useWebRTC(roomId: string, userId: string) {
         offer: RTCSessionDescriptionInit;
       }) => {
         console.log("Offer received — answering");
-        const pc = createPeerConnection(stream);
+        const pc = createPeerConnection(stream, iceServers);
         try {
           await pc.setRemoteDescription(new RTCSessionDescription(offer));
           await flushPendingCandidates(pc);
