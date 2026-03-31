@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useSocket } from "../app/context/SocketContext";
 
 export interface ChatMessage {
@@ -15,28 +15,19 @@ export function useChat(roomId: string, userId: string) {
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("chat-message", (msg: ChatMessage) => {
-      setMessages((prev) => [...prev, msg]);
-    });
-
-    return () => {
-      socket.off("chat-message");
+    const handleMessage = (data: ChatMessage) => {
+      setMessages((prev) => [...prev, data]);
     };
+
+    socket.on("chat-message", handleMessage);
+    return () => { socket.off("chat-message", handleMessage); };
   }, [socket]);
 
-  const sendMessage = useCallback((message: string) => {
+  const sendMessage = (message: string) => {
     if (!socket || !message.trim()) return;
-
-    // Optimistically add to local state
-    const newMsg = { userId, message };
-    setMessages((prev) => [...prev, newMsg]);
-
-    // Send to backend
+    setMessages((prev) => [...prev, { userId, message }]);
     socket.emit("chat-message", message);
-  }, [socket, userId]);
-
-  return {
-    messages,
-    sendMessage,
   };
+
+  return { messages, sendMessage };
 }

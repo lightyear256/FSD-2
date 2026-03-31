@@ -22,10 +22,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const socketInstance = io(SOCKET_URL, {
-      path: "/socket.io",
-      addTrailingSlash: false,
-    });
+    const socketInstance = io(SOCKET_URL);
 
     socketInstance.on("connect", () => {
       console.log("Connected to socket server with ID:", socketInstance.id);

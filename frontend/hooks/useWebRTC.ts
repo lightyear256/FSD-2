@@ -14,37 +14,46 @@ export function useWebRTC(roomId: string, userId: string) {
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
 
-  // Setup Peer Connection Helper
-  const createPeerConnection = useCallback((stream: MediaStream) => {
-    const pc = new RTCPeerConnection({
-      iceServers: [
-        {
-          urls: [
-            "stun:stun1.l.google.com:19302",
-            "stun:stun2.l.google.com:19302",
-          ],
-        },
-      ],
-    });
+  const createPeerConnection = useCallback(
+    (stream: MediaStream) => {
+      const pc = new RTCPeerConnection({
+        iceServers: [
+          { urls: ["stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"] },
+        ],
+      });
 
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        socket?.emit("ice-candidate", event.candidate);
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket?.emit("ice-candidate", event.candidate);
+        }
+      };
+
+      pc.ontrack = (event) => {
+        console.log("Remote track received");
+        setRemoteStream(event.streams[0]);
+      };
+
+      pc.onconnectionstatechange = () => {
+        console.log("Connection state:", pc.connectionState);
+      };
+
+      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+      return pc;
+    },
+    [socket]
+  );
+
+  const addPendingCandidates = async (pc: RTCPeerConnection) => {
+    for (const candidate of pendingCandidates.current) {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (e) {
+        console.error("Error adding buffered candidate:", e);
       }
-    };
+    }
+    pendingCandidates.current = [];
+  };
 
-    pc.ontrack = (event) => {
-      setRemoteStream(event.streams[0]);
-    };
-
-    stream.getTracks().forEach((track) => {
-      pc.addTrack(track, stream);
-    });
-
-    return pc;
-  }, [socket]);
-
-  // Main Effect for initializing media and socket listeners robustly
   useEffect(() => {
     if (!socket || !roomId || !userId) return;
 
@@ -59,21 +68,30 @@ export function useWebRTC(roomId: string, userId: string) {
         });
 
         if (!isComponentMounted) {
-            // Already unmounted while fetching media
-            currentStream.getTracks().forEach(t => t.stop());
-            return;
+          currentStream.getTracks().forEach((t) => t.stop());
+          return;
         }
 
         setLocalStream(currentStream);
 
-        // Bind essential socket event handlers *before* joining the room!
-        const handleRoomFull = () => setIsRoomFull(true);
 
-        const handleUserJoined = async (newUserId: string) => {
-          console.log("User joined:", newUserId);
-          setIsJoined(true);
-          
-          // Cleanup old PC
+        const handleRoomFull = () => {
+          console.log("Room is full");
+          setIsRoomFull(true);
+        };
+
+        const handleUserDisconnected = () => {
+          console.log("Remote user disconnected");
+          setRemoteStream(null);
+          if (peerConnection.current) {
+            peerConnection.current.close();
+            peerConnection.current = null;
+          }
+          pendingCandidates.current = [];
+        };
+
+        const handleReady = async () => {
+          console.log("Received ready — creating offer");
           if (peerConnection.current) {
             peerConnection.current.close();
           }
@@ -90,19 +108,12 @@ export function useWebRTC(roomId: string, userId: string) {
           }
         };
 
-        const handleUserDisconnected = () => {
-          console.log("Remote user disconnected");
-          setRemoteStream(null);
-          if (peerConnection.current) {
-            peerConnection.current.close();
-            peerConnection.current = null;
-          }
-          pendingCandidates.current = [];
-        };
-
-        const handleWebrtcOffer = async ({ offer }: { offer: RTCSessionDescriptionInit }) => {
-          console.log("Received Offer");
-          setIsJoined(true);
+        const handleWebrtcOffer = async ({
+          offer,
+        }: {
+          offer: RTCSessionDescriptionInit;
+        }) => {
+          console.log("Received offer — creating answer");
 
           if (peerConnection.current) {
             peerConnection.current.close();
@@ -113,63 +124,62 @@ export function useWebRTC(roomId: string, userId: string) {
 
           try {
             await pc.setRemoteDescription(new RTCSessionDescription(offer));
-            
-            // Process any queued candidates if they arrived early
-            for (const candidate of pendingCandidates.current) {
-              await pc.addIceCandidate(new RTCIceCandidate(candidate));
-            }
-            pendingCandidates.current = [];
+            await addPendingCandidates(pc);
 
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
-            
             socket.emit("webrtc-answer", answer);
           } catch (err) {
             console.error("Error handling offer:", err);
           }
         };
 
-        const handleWebrtcAnswer = async ({ answer }: { answer: RTCSessionDescriptionInit }) => {
-          console.log("Received Answer");
+        const handleWebrtcAnswer = async ({
+          answer,
+        }: {
+          answer: RTCSessionDescriptionInit;
+        }) => {
+          console.log("Received answer");
           if (!peerConnection.current) return;
 
           try {
-            await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
-
-            // Process any queued candidates if they arrived early
-            for (const candidate of pendingCandidates.current) {
-              await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
-            }
-            pendingCandidates.current = [];
+            await peerConnection.current.setRemoteDescription(
+              new RTCSessionDescription(answer)
+            );
+            await addPendingCandidates(peerConnection.current);
           } catch (err) {
             console.error("Error handling answer:", err);
           }
         };
 
-        const handleIceCandidate = async ({ candidate }: { candidate: RTCIceCandidateInit }) => {
-          if (!peerConnection.current || !peerConnection.current.remoteDescription) {
+        const handleIceCandidate = async ({
+          candidate,
+        }: {
+          candidate: RTCIceCandidateInit;
+        }) => {
+          const pc = peerConnection.current;
+          if (!pc || !pc.remoteDescription) {
             pendingCandidates.current.push(candidate);
             return;
           }
           try {
-            await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
+            await pc.addIceCandidate(new RTCIceCandidate(candidate));
           } catch (err) {
-            console.error("Error adding received ice candidate:", err);
+            console.error("Error adding ICE candidate:", err);
           }
         };
 
         socket.on("room-full", handleRoomFull);
-        socket.on("user-joined", handleUserJoined);
         socket.on("user-disconnected", handleUserDisconnected);
+        socket.on("ready", handleReady);
         socket.on("webrtc-offer", handleWebrtcOffer);
         socket.on("webrtc-answer", handleWebrtcAnswer);
         socket.on("ice-candidate", handleIceCandidate);
 
-        // Finally, notify backend we want to join *after* listeners are active
         socket.emit("join-room", roomId, userId);
-
+        setIsJoined(true);
       } catch (err) {
-        console.error("Failed to get local media", err);
+        console.error("Failed to get local media:", err);
       }
     };
 
@@ -177,44 +187,50 @@ export function useWebRTC(roomId: string, userId: string) {
 
     return () => {
       isComponentMounted = false;
-      if (currentStream) {
-        currentStream.getTracks().forEach((track) => track.stop());
-      }
-      if (peerConnection.current) {
-        peerConnection.current.close();
-      }
-      
-      // We pass the name of the event and remove any listeners attached. We don't remove 
-      // other components' handlers, just clear out everything mapped via this hook, which is fine!
+      currentStream?.getTracks().forEach((track) => track.stop());
+      peerConnection.current?.close();
+
       socket.off("room-full");
-      socket.off("user-joined");
       socket.off("user-disconnected");
+      socket.off("ready");
       socket.off("webrtc-offer");
       socket.off("webrtc-answer");
       socket.off("ice-candidate");
     };
   }, [roomId, userId, socket, createPeerConnection]);
 
-  // Media Control Toggles
   const toggleVideo = () => {
     if (localStream) {
-      const videoTrack = localStream.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setIsVideoEnabled(videoTrack.enabled);
+      const track = localStream.getVideoTracks()[0];
+      if (track) {
+        track.enabled = !track.enabled;
+        setIsVideoEnabled(track.enabled);
       }
     }
   };
 
   const toggleAudio = () => {
     if (localStream) {
-      const audioTrack = localStream.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setIsAudioEnabled(audioTrack.enabled);
+      const track = localStream.getAudioTracks()[0];
+      if (track) {
+        track.enabled = !track.enabled;
+        setIsAudioEnabled(track.enabled);
       }
     }
   };
+
+  const cleanup = useCallback(() => {
+    peerConnection.current?.close();
+    peerConnection.current = null;
+    localStream?.getTracks().forEach((track) => track.stop());
+    pendingCandidates.current = [];
+    socket?.off("room-full");
+    socket?.off("user-disconnected");
+    socket?.off("ready");
+    socket?.off("webrtc-offer");
+    socket?.off("webrtc-answer");
+    socket?.off("ice-candidate");
+  }, [localStream, socket]);
 
   return {
     localStream,
@@ -224,6 +240,7 @@ export function useWebRTC(roomId: string, userId: string) {
     isVideoEnabled,
     isAudioEnabled,
     toggleVideo,
-    toggleAudio
+    toggleAudio,
+    cleanup,
   };
 }
