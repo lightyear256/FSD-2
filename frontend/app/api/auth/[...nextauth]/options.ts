@@ -20,7 +20,7 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.email || !credentials?.password) return null;
 
         try {
-          const res = await fetch("http://localhost:5000/user/login", {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -64,7 +64,7 @@ export const authOptions: NextAuthOptions = {
 
       if (account?.provider === "google" && !token.backendToken) {
         try {
-          const res = await fetch("http://localhost:5000/user/google-login", {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user/google-login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

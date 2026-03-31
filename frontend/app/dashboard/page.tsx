@@ -21,7 +21,7 @@ export default function DashboardPage() {
     const token = getToken(session);
     if (!token) return;
 
-    const res = await fetch("http://localhost:5000/user/me", {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user/me`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -42,7 +42,7 @@ export default function DashboardPage() {
       setLoading(true);
       const token = getToken(session);
       console.log(token);
-      const res = await fetch("http://localhost:5000/room/create", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/room/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

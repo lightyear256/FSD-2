@@ -3,20 +3,20 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
+// import { useSearchParams } from "next/navigation";
 import { getToken } from "@/app/lib/getToken";
 
 export default function PostAuthPage() {
   const { data: session } = useSession();
   const router = useRouter();
-  const searchParams = useSearchParams();
+  // const searchParams = useSearchParams();
 
   useEffect(() => {
     const checkUser = async () => {
       const token = getToken(session);
       if (!token) return;
 
-      const res = await fetch("http://localhost:5000/user/me", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -32,13 +32,13 @@ export default function PostAuthPage() {
         router.push("/dashboard");
         return;
       }
-       const roleFromUrl = searchParams.get("role");
+      //  const roleFromUrl = searchParams.get("role");
       const roleFromStorage = localStorage.getItem("selectedRole");
 
-      console.log("5. role from URL:", roleFromUrl);
+      // console.log("5. role from URL:", roleFromUrl);
       console.log("6. role from localStorage:", roleFromStorage);
 
-      const role = roleFromUrl || roleFromStorage;
+      const role =  roleFromStorage;
       console.log("7. final role to set:", role);
 
       if (!role) {
@@ -46,7 +46,7 @@ export default function PostAuthPage() {
         return;
       }
 
-      const setRoleRes = await fetch("http://localhost:5000/user/set-role", {
+      const setRoleRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user/set-role`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

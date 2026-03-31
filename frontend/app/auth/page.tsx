@@ -302,7 +302,7 @@ export default function AuthPage() {
     setError("");
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:5000/user/login", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -323,7 +323,7 @@ export default function AuthPage() {
     setError("");
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:5000/user/signup", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password, role }),
@@ -516,6 +516,7 @@ export default function AuthPage() {
                     <select
                       className="auth-select"
                       value={role}
+                      title="auth"
                       onChange={e => { setRole(e.target.value); setError(""); }}
                     >
                       <option value="">Select your role</option>
