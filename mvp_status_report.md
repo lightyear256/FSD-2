@@ -14,28 +14,34 @@ Based on the evaluation of the codebase at `d:\Projects\FSD-2`, here is the brea
 ### 3. Real-time Signaling & Chat (Backend Only)
 - **Backend Socket.io:** An active WebSocket server handles users joining rooms, limits rooms to 2 participants, routes WebRTC signaling (`webrtc-offer`, `webrtc-answer`, `ice-candidate`), and broadcasts `chat-message` events.
 
+### 4. Interview Room (Frontend & Connection Logic)
+- **Frontend UI:** Created UI for users to view and join a unique room link (e.g., `/room/[roomId]`).
+- **Participant Limit Handling:** Frontend now handles the `room-full` socket event.
+- **Role Management:** (Pending) No logic currently enforces Interviewer vs. Candidate roles on the frontend.
+
+### 5. Video Call (MAIN FEATURE)
+- **WebRTC Core:** `RTCPeerConnection` and `navigator.mediaDevices` are fully implemented in `useWebRTC`.
+- **Frontend Signaling:** Implemented `socket.io-client` in the frontend (`SocketContext.tsx`) to connect to backend and exchange offer/answer/ICE.
+- **Video UI:** Created `MediaPanel` with video elements, camera, and microphone toggles.
+
+### 6. Live Chat (inside call)
+- **Frontend Panel:** Developed `ChatPanel` to send/receive messages in real-time, functioning natively with the backend routing.
+
 ---
 
 ## ❌ What is Remaining (Not Implemented)
 
-### 1. Interview Room (Frontend & Connection Logic)
-- **Frontend UI:** There is no UI for users to view or join a unique room link (e.g., `/room/abc123`).
-- **Role Management:** No logic currently enforces Interviewer vs. Candidate roles on the frontend.
-- **Participant Limit Handling:** Backend now drops extra users, but frontend needs to handle the `room-full` socket event.
-
-### 2. Video Call (MAIN FEATURE)
-- **WebRTC Core:** No `RTCPeerConnection` or `navigator.mediaDevices` implementation exists in the frontend.
-- **Frontend Signaling:** Missing `socket.io-client` implementation in the frontend to connect to the backend signaling server and handle WebRTC (offer/answer/ICE exchange).
-- **Video UI:** No video elements, camera, or microphone toggles.
+### 1. Role Management
+- No logic currently enforces Interviewer vs. Candidate specific view configurations based on user DB record.
 
 ### 3. Live Chat (inside call)
 - **Frontend Panel:** No chat UI panel in the frontend to send/receive messages in real-time, although the backend routing for `chat-message` is ready.
 
-### 4. Scheduling (Optional MVP+)
+### 2. Scheduling (Optional MVP+)
 - **Link Generation:** No UI or flow to generate and share interview links from the Dashboard.
 
-### 5. Optional Tools
+### 3. Optional Tools
 - **Monaco Editor:** Not installed or implemented.
 
 ## Summary
-The backend database, Next.js setup, NextAuth, and **Socket.io real-time signaling infrastructure** are now in place. The next major step is building the **Frontend Video Call and Chat UI**, alongside integrating `socket.io-client` and standard `WebRTC` connections.
+The backend database, Next.js setup, NextAuth, **Socket.io real-time signaling infrastructure**, and the **Frontend WebRTC Video Call/Chat UI** are now effectively implemented! The core 1-1 interview flow logic is fundamentally ready to test and use.
