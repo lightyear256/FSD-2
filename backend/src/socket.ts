@@ -51,7 +51,7 @@ export const initSocket = (server: HttpServer) => {
       if (isSecondUser) {
         // Tell the FIRST user to create and send an offer
         console.log(`Emitting 'ready' to first user in room ${roomId}`);
-        socket.to(roomId).emit("ready");
+        io.to(roomId).emit("ready");
       }
     });
 
