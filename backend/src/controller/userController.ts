@@ -7,7 +7,14 @@ type userData = {
   name?: string;
   email: string;
   password: string;
+  role: ROLE
 };
+
+enum ROLE{
+  "CANDIDATE",
+  "INTERVIEWER"
+}
+
 export async function login(req: Request, res: Response) {
   try {
     const userData = req.body as Partial<userData>;
@@ -63,6 +70,7 @@ export async function register(req: Request, res: Response) {
       typeof userData.name !== "string" ||
       typeof userData.email !== "string" ||
       typeof userData.password !== "string" ||
+      typeof userData.role !== "string" ||
       userData.name.trim().length === 0 ||
       userData.email.trim().length === 0 ||
       userData.password.trim().length === 0
@@ -93,6 +101,7 @@ export async function register(req: Request, res: Response) {
         name: userData.name.trim(),
         email,
         password: hashedPassword,
+        role: userData.role
       },
     });
 
@@ -123,7 +132,7 @@ export async function register(req: Request, res: Response) {
 
 export async function googleLogin(req: Request, res: Response) {
   try {
-    const { email, name } = req.body;
+    const { email, name, role } = req.body;
     if (!email) {
       return res.status(400).send({
         msg: "Email is required",
@@ -131,23 +140,21 @@ export async function googleLogin(req: Request, res: Response) {
       });
     }
 
-    // 1. Check if user exists
     let user = await prisma.user.findFirst({
       where: { email: email.trim() },
     });
 
-    // 2. If not, create a new user (with an empty password)
     if (!user) {
       user = await prisma.user.create({
         data: {
           email: email.trim(),
           name: name ? name.trim() : "Google User",
-          password: "", // User authenticated via Google, so no password
+          password: "",
+          role
         },
       });
     }
 
-    // 3. Generate backend JWT
     const token = jwt.sign(
       { id: user.id, email: user.email },
       process.env.JWT_SECRET || "ddd",
@@ -158,7 +165,7 @@ export async function googleLogin(req: Request, res: Response) {
       msg: "Google login successful",
       success: true,
       token,
-      user: { id: user.id, email: user.email, name: user.name },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role },
     });
   } catch (error) {
     return res.status(500).send({
