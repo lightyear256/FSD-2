@@ -12,45 +12,59 @@ export const initSocket = (server: HttpServer) => {
   io.on("connection", (socket: Socket) => {
     console.log("New client connected:", socket.id);
 
+    let currentRoom: string | null = null;
+    let currentUserId: string | null = null;
+
     socket.on("join-room", (roomId: string, userId: string) => {
-      // Enforce max 2 participants
       const room = io.sockets.adapter.rooms.get(roomId);
-      const numClients = room ? room.size : 0;
+      const numClients = room ? (room.has(socket.id) ? room.size - 1 : room.size) : 0;
 
       if (numClients >= 2) {
         socket.emit("room-full", roomId);
         return;
       }
 
+      if (currentRoom && currentRoom !== roomId) {
+        socket.leave(currentRoom);
+      }
+
       socket.join(roomId);
+      currentRoom = roomId;
+      currentUserId = userId;
       console.log(`User ${userId} (socket ${socket.id}) joined room ${roomId}`);
       
-      // Notify other user in the room
       socket.to(roomId).emit("user-joined", userId);
+    });
 
-      // Handle basic chat messages
-      socket.on("chat-message", (message: string) => {
-        socket.to(roomId).emit("chat-message", { userId, message });
-      });
+    socket.on("chat-message", (message: string) => {
+      if (currentRoom) {
+        socket.to(currentRoom).emit("chat-message", { userId: currentUserId, message });
+      }
+    });
 
-      // WebRTC Signaling
-      socket.on("webrtc-offer", (offer: any) => {
-        socket.to(roomId).emit("webrtc-offer", { userId, offer });
-      });
+    socket.on("webrtc-offer", (offer: any) => {
+      if (currentRoom) {
+        socket.to(currentRoom).emit("webrtc-offer", { userId: currentUserId, offer });
+      }
+    });
 
-      socket.on("webrtc-answer", (answer: any) => {
-        socket.to(roomId).emit("webrtc-answer", { userId, answer });
-      });
+    socket.on("webrtc-answer", (answer: any) => {
+      if (currentRoom) {
+        socket.to(currentRoom).emit("webrtc-answer", { userId: currentUserId, answer });
+      }
+    });
 
-      socket.on("ice-candidate", (candidate: any) => {
-        socket.to(roomId).emit("ice-candidate", { userId, candidate });
-      });
+    socket.on("ice-candidate", (candidate: any) => {
+      if (currentRoom) {
+        socket.to(currentRoom).emit("ice-candidate", { userId: currentUserId, candidate });
+      }
+    });
 
-      // Handle disconnect
-      socket.on("disconnect", () => {
-        console.log(`User ${userId} disconnected from room ${roomId}`);
-        socket.to(roomId).emit("user-disconnected", userId);
-      });
+    socket.on("disconnect", () => {
+      console.log(`User ${currentUserId} disconnected from room ${currentRoom}`);
+      if (currentRoom) {
+        socket.to(currentRoom).emit("user-disconnected", currentUserId);
+      }
     });
   });
 

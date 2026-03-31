@@ -30,7 +30,7 @@ export const authOptions: NextAuthOptions = {
           });
 
           const data = await res.json();
-
+          console.log("hello",data.token);
           if (res.ok && data.success && data.token) {
             return {
               id: data.user?.id ?? "unknown",
@@ -52,6 +52,7 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     async jwt({ token, user, account }) {
+      console.log(token);
       // First login
       if (user) {
         token.id = user.id;
