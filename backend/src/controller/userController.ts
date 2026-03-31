@@ -33,7 +33,7 @@ export async function login(req: Request, res: Response) {
         success: false,
       });
     }
-    const success = await bcrypt.compare(userData.password, user.password);
+    const success = await bcrypt.compare(userData.password, user.password!);
     if (!success) {
       return res.status(403).send({
         msg: "Password incorrect",
