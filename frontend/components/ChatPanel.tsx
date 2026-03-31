@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send } from "lucide-react";
-import { ChatMessage } from "../hooks/useChat";
+import type { ChatMessage } from "@/hooks/useChat";
 
 interface ChatPanelProps {
   messages: ChatMessage[];
@@ -12,70 +12,84 @@ interface ChatPanelProps {
 
 export function ChatPanel({ messages, sendMessage, currentUserId }: ChatPanelProps) {
   const [input, setInput] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    scrollToBottom();
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (input.trim()) {
-      sendMessage(input.trim());
-      setInput("");
-    }
+  const handleSend = () => {
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    sendMessage(trimmed);
+    setInput("");
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-900 border-l border-gray-800 w-full md:w-80 shrink-0">
-      <div className="p-4 border-b border-gray-800">
-        <h2 className="text-lg font-semibold text-white">In-call Messages</h2>
+    <div className="w-full md:w-72 lg:w-80 flex flex-col border-t md:border-t-0 md:border-l border-gray-800 bg-gray-950 h-56 md:h-full flex-shrink-0">
+      {/* Header */}
+      <div className="h-12 px-4 flex items-center border-b border-gray-800 flex-shrink-0">
+        <h2 className="text-sm font-semibold text-gray-300">Chat</h2>
+        {messages.length > 0 && (
+          <span className="ml-2 text-xs bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center">
+            {messages.length}
+          </span>
+        )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg, idx) => {
-          const isMe = msg.userId === currentUserId;
-          return (
-            <div
-              key={idx}
-              className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
-            >
-              <span className="text-xs text-gray-400 mb-1">
-                {isMe ? "You" : `User ${msg.userId.substring(0, 4)}`}
-              </span>
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
+        {messages.length === 0 ? (
+          <p className="text-gray-600 text-sm text-center mt-8">
+            No messages yet
+          </p>
+        ) : (
+          messages.map((msg, i) => {
+            const isOwn = msg.userId === currentUserId;
+            return (
               <div
-                className={`max-w-[80%] rounded-lg px-4 py-2 break-words ${
-                  isMe ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-200"
-                }`}
+                key={i}
+                className={`flex flex-col gap-0.5 ${isOwn ? "items-end" : "items-start"}`}
               >
-                {msg.message}
+                <div
+                  className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-snug break-words ${
+                    isOwn
+                      ? "bg-blue-600 text-white rounded-br-sm"
+                      : "bg-gray-800 text-gray-100 rounded-bl-sm"
+                  }`}
+                >
+                  {msg.message}
+                </div>
+                <span className="text-[11px] text-gray-600">
+                  {isOwn ? "You" : "Peer"}
+                </span>
               </div>
-            </div>
-          );
-        })}
-        <div ref={messagesEndRef} />
+            );
+          })
+        )}
+        <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="p-4 border-t border-gray-800 flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Send a message..."
-          className="flex-1 w-full bg-gray-800 text-white rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button
-          type="submit"
-          className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
-          disabled={!input.trim()}
-        >
-          <Send className="w-5 h-5" />
-        </button>
-      </form>
+      {/* Input */}
+      <div className="p-3 border-t border-gray-800 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            placeholder="Message…"
+            className="flex-1 bg-gray-800 text-white text-sm rounded-full px-4 py-2 outline-none placeholder-gray-600 focus:ring-1 focus:ring-blue-500 transition-shadow"
+          />
+          <button
+            onClick={handleSend}
+            disabled={!input.trim()}
+            className="w-9 h-9 rounded-full bg-blue-600 hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center flex-shrink-0 transition-all active:scale-95"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
