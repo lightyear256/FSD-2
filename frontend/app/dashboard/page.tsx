@@ -3,21 +3,21 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-
+import { getToken } from "@/app/lib/getToken";
 
 export default function DashboardPage() {
-  const { data: session } = useSession();
   const router = useRouter();
-
+  
   const [createdRoomId, setCreatedRoomId] = useState("");
   const [joinRoomId, setJoinRoomId] = useState("");
   const [loading, setLoading] = useState(false);
+  
+  const { data: session } = useSession();
 
-  // 🔹 Create Room
   const handleCreateRoom = async () => {
     try {
       setLoading(true);
-      const token = session?.backendToken
+      const token = getToken(session);
       console.log(token);
       const res = await fetch("http://localhost:5000/room/create", {
         method: "POST",
