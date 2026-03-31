@@ -132,7 +132,7 @@ export async function register(req: Request, res: Response) {
 
 export async function googleLogin(req: Request, res: Response) {
   try {
-    const { email, name, role } = req.body;
+    const { email, name } = req.body;
     if (!email) {
       return res.status(400).send({
         msg: "Email is required",
@@ -150,7 +150,6 @@ export async function googleLogin(req: Request, res: Response) {
           email: email.trim(),
           name: name ? name.trim() : "Google User",
           password: "",
-          role
         },
       });
     }
@@ -174,3 +173,65 @@ export async function googleLogin(req: Request, res: Response) {
     });
   }
 }
+
+export async function setRole(req: Request, res: Response) {
+  try {
+    const userId = req.user?.id;
+    const { role } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        msg: "Unauthorized",
+      });
+    }
+
+    if (!role || !["CANDIDATE", "INTERVIEWER"].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        msg: "Invalid role",
+      });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { role },
+    });
+
+    return res.status(200).json({
+      success: true,
+      msg: "Role updated successfully",
+      user: {
+        id: updatedUser.id,
+        role: updatedUser.role,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      msg: "Failed to set role",
+    });
+  }
+}
+
+export const getMe = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+      },
+    });
+
+    return res.json(user);
+  } catch {
+    return res.status(500).json({ error: "Failed to fetch user" });
+  }
+};
