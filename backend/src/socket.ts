@@ -1,5 +1,6 @@
 import { Server as HttpServer } from "http";
 import { Server, Socket } from "socket.io";
+import { prisma } from "./lib/prismaClient.js";
 
 const rooms = new Map<string, Set<string>>();
 
@@ -16,7 +17,7 @@ export const initSocket = (server: HttpServer) => {
     let currentRoom: string | null = null;
     let currentUserId: string | null = null;
 
-    socket.on("join-room", (roomId: string, userId: string) => {
+    socket.on("join-room", async(roomId: string, userId: string) => {
       // Handle reconnects: leave previous room first
       if (currentRoom) {
         const prev = rooms.get(currentRoom);
@@ -46,6 +47,19 @@ export const initSocket = (server: HttpServer) => {
       room.add(socket.id);
       socket.join(roomId);
 
+      try {
+        const existing = await prisma.roomParticipant.findUnique({
+          where: { userId_roomId: { userId, roomId } }
+        });
+
+        if (!existing) {
+          await prisma.roomParticipant.create({
+            data: { roomId, userId }
+          });
+        }
+      } catch (err) {
+        console.error("Failed to save participant to DB:", err);
+      }
       console.log(`User ${userId} (${socket.id}) joined room ${roomId} — ${room.size}/2`);
 
       if (isSecondUser) {
@@ -79,15 +93,27 @@ export const initSocket = (server: HttpServer) => {
       socket.to(currentRoom).emit("ready");
     });
 
-    socket.on("chat-message", (message: string) => {
-      if (!currentRoom) return;
+    socket.on("chat-message", async(message: string) => {
+      if (!currentRoom || !currentUserId) return;
+
+      try {
+        await prisma.message.create({
+          data: {
+            roomId: currentRoom,
+            userId: currentUserId,
+            content: message,
+          }
+        });
+      } catch (err) {
+        console.error("Failed to save message to DB:", err);
+      }
       socket.to(currentRoom).emit("chat-message", {
         userId: currentUserId,
         message,
       });
     });
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", async() => {
       console.log(`Socket ${socket.id} disconnected from room ${currentRoom}`);
       if (currentRoom) {
         const room = rooms.get(currentRoom);
@@ -96,6 +122,17 @@ export const initSocket = (server: HttpServer) => {
           if (room.size === 0) rooms.delete(currentRoom);
         }
         socket.to(currentRoom).emit("user-disconnected", currentUserId);
+        socket.leave(currentRoom);
+      }
+
+       if (currentRoom && currentUserId) {
+        try {
+          await prisma.roomParticipant.deleteMany({
+            where: { roomId: currentRoom, userId: currentUserId }
+          });
+        } catch (err) {
+          console.error("Failed to remove participant from DB:", err);
+        }
       }
     });
   });
