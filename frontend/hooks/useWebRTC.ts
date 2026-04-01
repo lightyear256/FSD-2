@@ -67,11 +67,12 @@ export function useWebRTC(roomId: string, userId: string) {
       localStreamRef.current = stream;
       setLocalStream(stream);
       
+      const backendUrl = new URL(BACKEND_URL);
       const peer = new Peer({
-        host: new URL(BACKEND_URL).hostname,
-        port: Number(new URL(BACKEND_URL).port) || 5000,
+        host:  backendUrl.hostname,
+        port: backendUrl.port ? Number(backendUrl.port) : (backendUrl.protocol === "https:" ? 443 : 80),
         path: "/peerjs",
-        secure: BACKEND_URL.startsWith("https"),
+        secure: backendUrl.protocol === "https:",
         config: { iceServers },
       });
       peerRef.current = peer;
