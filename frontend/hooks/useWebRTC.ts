@@ -17,7 +17,7 @@ export function useWebRTC(roomId: string, userId: string) {
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
 
   const peerRef = useRef<Peer | null>(null);
-  const callRef = useRef<MediaConnection | null>(null);
+  const currentCallRef = useRef<MediaConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
 
  const closeCall = useCallback(() => {
