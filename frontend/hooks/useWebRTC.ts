@@ -143,7 +143,7 @@ export function useWebRTC(roomId: string, userId: string) {
       socket.off("user-disconnected");
       socket.off("user-connected");
     };
-  }, [roomId, userId, socket, closePeerConnection]);
+  }, [roomId, userId, socket, closeCall, closePeer]);
 
   const toggleVideo = useCallback(() => {
     const track = localStreamRef.current?.getVideoTracks()[0];
@@ -170,7 +170,7 @@ export function useWebRTC(roomId: string, userId: string) {
     socket?.off("room-full");
     socket?.off("user-disconnected");
     socket?.off("user-connected");
-  }, [closePeerConnection, socket]);
+  }, [closePeer, socket]);
 
   return {
     localStream,
