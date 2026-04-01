@@ -89,7 +89,7 @@ export function useWebRTC(roomId: string, userId: string) {
         socket.emit("join-room", roomId, userId, peerId);
         setIsJoined(true);
       });
-      // Handle receiving calls
+      
      peer.on("call", (call) => {
         console.log("Incoming PeerJS call from:", call.peer);
         currentCallRef.current = call;
