@@ -2,32 +2,9 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useSocket } from "../app/context/SocketContext";
+import Peer, { MediaConnection } from "peerjs";
 
-const ICE_SERVERS: RTCIceServer[] = [
-  {
-        urls: "stun:stun.relay.metered.ca:80",
-      },
-      {
-        urls: "turn:global.relay.metered.ca:80",
-        username: "5d789d78b7cf4af75fbcb7d5",
-        credential: "trXPryZNWzpstmFz",
-      },
-      {
-        urls: "turn:global.relay.metered.ca:80?transport=tcp",
-        username: "5d789d78b7cf4af75fbcb7d5",
-        credential: "trXPryZNWzpstmFz",
-      },
-      {
-        urls: "turn:global.relay.metered.ca:443",
-        username: "5d789d78b7cf4af75fbcb7d5",
-        credential: "trXPryZNWzpstmFz",
-      },
-      {
-        urls: "turns:global.relay.metered.ca:443?transport=tcp",
-        username: "5d789d78b7cf4af75fbcb7d5",
-        credential: "trXPryZNWzpstmFz",
-      },
-];
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
 
 export function useWebRTC(roomId: string, userId: string) {
   const { socket } = useSocket();
@@ -39,77 +16,21 @@ export function useWebRTC(roomId: string, userId: string) {
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
 
-  const peerConnection = useRef<RTCPeerConnection | null>(null);
-  const pendingCandidates = useRef<RTCIceCandidateInit[]>([]);
+  const peerRef = useRef<Peer | null>(null);
+  const callRef = useRef<MediaConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
 
-  const flushPendingCandidates = async (pc: RTCPeerConnection) => {
-    for (const candidate of pendingCandidates.current) {
-      try {
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch (e) {
-        console.error("Error adding buffered ICE candidate:", e);
-      }
-    }
-    pendingCandidates.current = [];
-  };
-
-  const closePeerConnection = useCallback(() => {
-    if (peerConnection.current) {
-      peerConnection.current.onicecandidate = null;
-      peerConnection.current.ontrack = null;
-      peerConnection.current.onconnectionstatechange = null;
-      peerConnection.current.oniceconnectionstatechange = null;
-      peerConnection.current.close();
-      peerConnection.current = null;
-    }
-    pendingCandidates.current = [];
+ const closeCall = useCallback(() => {
+    currentCallRef.current?.close();
+    currentCallRef.current = null;
     setRemoteStream(null);
   }, []);
-
-  const createPeerConnection = useCallback(
-    (stream: MediaStream, iceServers: RTCIceServer[]): RTCPeerConnection => {
-      closePeerConnection();
-
-      const pc = new RTCPeerConnection({ iceServers });
-
-      pc.onicecandidate = (event) => {
-        if (event.candidate) {
-          socket?.emit("ice-candidate", event.candidate);
-        }
-      };
-
-      pc.ontrack = (event) => {
-        console.log("Remote track received:", event.track.kind);
-        if (event.streams?.[0]) {
-          setRemoteStream(event.streams[0]);
-        } else {
-          setRemoteStream((prev) => {
-            const s = prev ?? new MediaStream();
-            s.addTrack(event.track);
-            return s;
-          });
-        }
-      };
-
-      pc.onconnectionstatechange = () => {
-        console.log("Connection state:", pc.connectionState);
-        if (pc.connectionState === "failed") {
-          console.warn("Connection failed — requesting re-negotiation");
-          socket?.emit("request-offer");
-        }
-      };
-
-      pc.oniceconnectionstatechange = () => {
-        console.log("ICE state:", pc.iceConnectionState);
-      };
-
-      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-      peerConnection.current = pc;
-      return pc;
-    },
-    [socket, closePeerConnection]
-  );
+ 
+  const closePeer = useCallback(() => {
+    closeCall();
+    peerRef.current?.destroy();
+    peerRef.current = null;
+  }, [closeCall]);
 
   useEffect(() => {
     if (!socket || !roomId || !userId) return;
@@ -119,17 +40,14 @@ export function useWebRTC(roomId: string, userId: string) {
     const setup = async () => {
       let iceServers: RTCIceServer[] = [];
       try {
-        const iceRes = await fetch(
-          `https://5d789d78b7cf4af75fbcb7d5.metered.ca/api/v1/turn/credentials?apiKey=${process.env.NEXT_PUBLIC_METERED_API_KEY}`
-        );
-        iceServers = await iceRes.json();
+         const res = await fetch(`${BACKEND_URL}/api/turn`);
+        const data = await res.json();
+        iceServers = data.iceServers ?? [];
       } catch (err) {
         console.error("Failed to fetch ICE servers, falling back:", err);
-        // Fallback in case fetch fails
         iceServers = [{ urls: "stun:stun.l.google.com:19302" }];
       }
 
-      // Step 1: acquire media first
       let stream: MediaStream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -148,8 +66,46 @@ export function useWebRTC(roomId: string, userId: string) {
 
       localStreamRef.current = stream;
       setLocalStream(stream);
+      
+      const peer = new Peer({
+        host: new URL(BACKEND_URL).hostname,
+        port: Number(new URL(BACKEND_URL).port) || 5000,
+        path: "/peerjs",
+        secure: BACKEND_URL.startsWith("https"),
+        config: { iceServers },
+      });
+      peerRef.current = peer;
 
-      // Step 2: define handlers (close over `stream`)
+       peer.on("open", (peerId) => {
+        if (!mounted) return;
+        console.log("PeerJS open, peerId:", peerId);
+ 
+        // Register socket listeners BEFORE emitting join-room
+        socket.on("room-full", handleRoomFull);
+        socket.on("user-disconnected", handleUserDisconnected);
+        socket.on("user-connected", handleUserConnected);
+ 
+        // Pass peerId as the third argument so the backend can share it
+        socket.emit("join-room", roomId, userId, peerId);
+        setIsJoined(true);
+      });
+      // Handle receiving calls
+     peer.on("call", (call) => {
+        console.log("Incoming PeerJS call from:", call.peer);
+        currentCallRef.current = call;
+        call.answer(stream);
+        call.on("stream", (remote) => {
+          console.log("Remote stream received (answerer)");
+          setRemoteStream(remote);
+        });
+        call.on("close", () => {
+          console.log("Call closed");
+          setRemoteStream(null);
+        });
+        call.on("error", (err) => console.error("Call error:", err));
+      });
+
+      peer.on("error", (err) => console.error("PeerJS error:", err));
 
       const handleRoomFull = () => {
         setIsRoomFull(true);
@@ -157,86 +113,23 @@ export function useWebRTC(roomId: string, userId: string) {
 
       const handleUserDisconnected = () => {
         console.log("Remote user disconnected");
-        closePeerConnection();
+        closeCall();
       };
 
-      const handleReady = async () => {
-        console.log("'ready' — creating offer");
-        const pc = createPeerConnection(stream, iceServers);
-        try {
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          socket.emit("webrtc-offer", offer);
-        } catch (err) {
-          console.error("Error creating offer:", err);
-        }
+       const handleUserConnected = (remotePeerId: string) => {
+        console.log("user-connected — calling peer:", remotePeerId);
+        const call = peer.call(remotePeerId, stream);
+        currentCallRef.current = call;
+        call.on("stream", (remote) => {
+          console.log("Remote stream received (caller)");
+          setRemoteStream(remote);
+        });
+        call.on("close", () => {
+          console.log("Call closed");
+          setRemoteStream(null);
+        });
+        call.on("error", (err) => console.error("Call error:", err));
       };
-
-      const handleWebrtcOffer = async ({
-        offer,
-      }: {
-        offer: RTCSessionDescriptionInit;
-      }) => {
-        console.log("Offer received — answering");
-        const pc = createPeerConnection(stream, iceServers);
-        try {
-          await pc.setRemoteDescription(new RTCSessionDescription(offer));
-          await flushPendingCandidates(pc);
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-          socket.emit("webrtc-answer", answer);
-        } catch (err) {
-          console.error("Error handling offer:", err);
-        }
-      };
-
-      const handleWebrtcAnswer = async ({
-        answer,
-      }: {
-        answer: RTCSessionDescriptionInit;
-      }) => {
-        console.log("Answer received");
-        const pc = peerConnection.current;
-        if (!pc) return;
-        try {
-          await pc.setRemoteDescription(new RTCSessionDescription(answer));
-          await flushPendingCandidates(pc);
-        } catch (err) {
-          console.error("Error handling answer:", err);
-        }
-      };
-
-      const handleIceCandidate = async ({
-        candidate,
-      }: {
-        candidate: RTCIceCandidateInit;
-      }) => {
-        const pc = peerConnection.current;
-        if (!pc || !pc.remoteDescription) {
-          pendingCandidates.current.push(candidate);
-          return;
-        }
-        try {
-          await pc.addIceCandidate(new RTCIceCandidate(candidate));
-        } catch (err) {
-          console.error("Error adding ICE candidate:", err);
-        }
-      };
-
-      // Step 3: register ALL listeners BEFORE emitting join-room
-      // Critical: prevents race where server responds before listeners attach
-      socket.on("room-full", handleRoomFull);
-      socket.on("user-disconnected", handleUserDisconnected);
-      socket.on("ready", handleReady);
-      socket.on("webrtc-offer", handleWebrtcOffer);
-      socket.on("webrtc-answer", handleWebrtcAnswer);
-      socket.on("ice-candidate", handleIceCandidate);
-
-      // Step 4: join — server emits "ready" to the other peer after this
-      socket.emit("join-room", roomId, userId);
-
-      // Step 5: mark joined — no need to wait for server ack
-      setIsJoined(true);
     };
 
     setup();
@@ -245,15 +138,12 @@ export function useWebRTC(roomId: string, userId: string) {
       mounted = false;
       localStreamRef.current?.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
-      closePeerConnection();
+      closePeer();
       socket.off("room-full");
       socket.off("user-disconnected");
-      socket.off("ready");
-      socket.off("webrtc-offer");
-      socket.off("webrtc-answer");
-      socket.off("ice-candidate");
+      socket.off("user-connected");
     };
-  }, [roomId, userId, socket, createPeerConnection, closePeerConnection]);
+  }, [roomId, userId, socket, closePeerConnection]);
 
   const toggleVideo = useCallback(() => {
     const track = localStreamRef.current?.getVideoTracks()[0];
@@ -272,17 +162,14 @@ export function useWebRTC(roomId: string, userId: string) {
   }, []);
 
   const cleanup = useCallback(() => {
-    closePeerConnection();
+    closePeer();
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
     setLocalStream(null);
     setIsJoined(false);
     socket?.off("room-full");
     socket?.off("user-disconnected");
-    socket?.off("ready");
-    socket?.off("webrtc-offer");
-    socket?.off("webrtc-answer");
-    socket?.off("ice-candidate");
+    socket?.off("user-connected");
   }, [closePeerConnection, socket]);
 
   return {

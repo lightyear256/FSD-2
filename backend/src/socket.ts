@@ -17,7 +17,7 @@ export const initSocket = (server: HttpServer) => {
     let currentRoom: string | null = null;
     let currentUserId: string | null = null;
 
-    socket.on("join-room", async(roomId: string, userId: string) => {
+    socket.on("join-room", async(roomId: string, userId: string, peerId?: string) => {
       // Handle reconnects: leave previous room first
       if (currentRoom) {
         const prev = rooms.get(currentRoom);
@@ -62,36 +62,13 @@ export const initSocket = (server: HttpServer) => {
       }
       console.log(`User ${userId} (${socket.id}) joined room ${roomId} — ${room.size}/2`);
 
-      if (isSecondUser) {
-        // Tell the FIRST user to create and send an offer
-        console.log(`Emitting 'ready' to first user in room ${roomId}`);
-        io.to(roomId).emit("ready");
+      if (peerId) {
+        // Notify others in room to call this peer
+        socket.to(roomId).emit("user-connected", peerId);
       }
     });
 
-    socket.on("webrtc-offer", (offer: RTCSessionDescriptionInit) => {
-      if (!currentRoom) return;
-      console.log(`Forwarding offer in room ${currentRoom}`);
-      socket.to(currentRoom).emit("webrtc-offer", { offer });
-    });
 
-    socket.on("webrtc-answer", (answer: RTCSessionDescriptionInit) => {
-      if (!currentRoom) return;
-      console.log(`Forwarding answer in room ${currentRoom}`);
-      socket.to(currentRoom).emit("webrtc-answer", { answer });
-    });
-
-    socket.on("ice-candidate", (candidate: RTCIceCandidateInit) => {
-      if (!currentRoom) return;
-      socket.to(currentRoom).emit("ice-candidate", { candidate });
-    });
-
-    // Triggered when a peer connection fails — ask the other side to re-offer
-    socket.on("request-offer", () => {
-      if (!currentRoom) return;
-      console.log(`Re-negotiation requested in room ${currentRoom}`);
-      socket.to(currentRoom).emit("ready");
-    });
 
     socket.on("chat-message", async(message: string) => {
       if (!currentRoom || !currentUserId) return;
