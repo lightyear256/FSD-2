@@ -1,123 +1,97 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { Mic, MicOff, Video, VideoOff, PhoneOff } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { VideoOff } from "lucide-react";
 
 interface MediaPanelProps {
   localStream: MediaStream | null;
   remoteStream: MediaStream | null;
   isVideoEnabled: boolean;
-  isAudioEnabled: boolean;
-  toggleVideo: () => void;
-  toggleAudio: () => void;
-  onLeaveRoom: () => void;
 }
 
-export function MediaPanel({
-  localStream,
-  remoteStream,
-  isVideoEnabled,
-  isAudioEnabled,
-  toggleVideo,
-  toggleAudio,
-  onLeaveRoom,
-}: MediaPanelProps) {
-  const localVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+export function MediaPanel({ localStream, remoteStream, isVideoEnabled }: MediaPanelProps) {
+  const primaryRef = useRef<HTMLVideoElement>(null);
+  const pipRef = useRef<HTMLVideoElement>(null);
+
+  const [swapped, setSwapped] = useState(false);
+
+  const primaryStream = swapped ? localStream : remoteStream;
+  const pipStream = swapped ? remoteStream : localStream;
+  const pipIsMuted = !swapped; // local feed is always muted
+  const primaryIsMirrored = swapped; // mirror only when local is primary
+  const pipIsMirrored = !swapped;  // mirror only when local is PiP
 
   useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
-    }
-  }, [localStream]);
+    if (primaryRef.current) primaryRef.current.srcObject = primaryStream ?? null;
+  }, [primaryStream]);
 
   useEffect(() => {
-    if (remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = remoteStream;
-    }
-  }, [remoteStream]);
+    if (pipRef.current) pipRef.current.srcObject = pipStream ?? null;
+  }, [pipStream]);
+
+  const primaryHasVideo = swapped ? isVideoEnabled : !!remoteStream;
+  const pipHasVideo = swapped ? !!remoteStream : isVideoEnabled;
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-[#0a0c0f]">
-      {remoteStream ? (
-        <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-cover" />
-      ) : (
-        <div className="flex h-full flex-col items-center justify-center px-6 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/15 bg-white/[0.03] text-white/75">
-            P
-          </div>
-          <p className="mt-4 text-sm font-medium text-white/80">Peer is joining...</p>
-          <p className="mt-1 text-xs text-white/50">Connection is active. Video will appear shortly.</p>
-        </div>
-      )}
+    <div className="relative h-full w-full overflow-hidden bg-[#080a0d]">
 
-      <div className="absolute left-4 top-4 rounded-full border border-white/10 bg-black/40 px-3 py-1 text-xs text-white/75 backdrop-blur">
-        <span className="mr-1 text-white/45">Participant:</span>
-        Peer
-      </div>
-
-      <div className="absolute bottom-20 right-4 h-28 w-44 overflow-hidden rounded-xl border border-white/20 bg-black/35 shadow-2xl">
+      {primaryHasVideo ? (
         <video
-          ref={localVideoRef}
+          ref={primaryRef}
           autoPlay
           playsInline
-          muted
+          muted={swapped}
           className="h-full w-full object-cover"
-          style={{ transform: "scaleX(-1)" }}
+          style={primaryIsMirrored ? { transform: "scaleX(-1)" } : undefined}
         />
-        {!isVideoEnabled && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#111419]">
-            <VideoOff className="h-6 w-6 text-white/50" />
+      ) : (
+        <>
+          
+          <video ref={primaryRef} autoPlay playsInline muted className="hidden" />
+          <div className="flex h-full flex-col items-center justify-center gap-3">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/[0.04]">
+              <VideoOff className="h-7 w-7 text-white/35" />
+            </div>
+            <p className="text-xs text-white/35">
+              {swapped ? "Your camera is off" : "Waiting for peer…"}
+            </p>
           </div>
+        </>
+      )}
+
+      
+      <button
+        onClick={() => setSwapped((s) => !s)}
+        title="Click to swap"
+        className="group absolute bottom-4 right-4 h-[5.5rem] w-36 overflow-hidden rounded-xl border border-white/20 bg-[#0d1014] shadow-2xl transition-transform hover:scale-[1.03] active:scale-[0.97]"
+      >
+        {pipHasVideo ? (
+          <video
+            ref={pipRef}
+            autoPlay
+            playsInline
+            muted={pipIsMuted}
+            className="h-full w-full object-cover"
+            style={pipIsMirrored ? { transform: "scaleX(-1)" } : undefined}
+          />
+        ) : (
+          <>
+            <video ref={pipRef} autoPlay playsInline muted className="hidden" />
+            <div className="flex h-full items-center justify-center bg-[#0d1014]">
+              <VideoOff className="h-5 w-5 text-white/25" />
+            </div>
+          </>
         )}
-        <div className="absolute bottom-0 left-0 right-0 bg-black/45 px-2 py-1 text-[11px] text-white/75">You</div>
-      </div>
 
-      <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/15 bg-black/55 p-2 backdrop-blur-md">
-        <ControlButton
-          active={isAudioEnabled}
-          onClick={toggleAudio}
-          icon={isAudioEnabled ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-          label={isAudioEnabled ? "Mute" : "Unmute"}
-        />
-        <ControlButton
-          active={isVideoEnabled}
-          onClick={toggleVideo}
-          icon={isVideoEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
-          label={isVideoEnabled ? "Stop video" : "Start video"}
-        />
-        <button
-          onClick={onLeaveRoom}
-          title="Leave room"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--danger)] text-white transition hover:opacity-90"
-        >
-          <PhoneOff className="h-4 w-4" />
-        </button>
-      </div>
+        
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+          <span className="text-[11px] font-medium text-white/80">Swap</span>
+        </div>
+
+        <div className="absolute bottom-0 left-0 right-0 bg-black/40 px-2 py-0.5 text-[10px] text-white/60">
+          {swapped ? "Peer" : "You"}
+        </div>
+      </button>
     </div>
-  );
-}
-
-function ControlButton({
-  active,
-  onClick,
-  icon,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      title={label}
-      className={`flex h-10 w-10 items-center justify-center rounded-full transition ${
-        active ? "bg-white/20 text-white hover:bg-white/30" : "bg-white/10 text-white/80 hover:bg-white/20"
-      }`}
-    >
-      {icon}
-    </button>
   );
 }
