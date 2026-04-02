@@ -1,7 +1,7 @@
 "use client";
-
+import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 import { useState, useRef, useEffect } from "react";
-import { Send, X } from "lucide-react";
+import { Send, X, Smile } from "lucide-react";
 import type { ChatMessage } from "@/hooks/useChat";
 
 interface ChatPanelProps {
@@ -14,10 +14,26 @@ interface ChatPanelProps {
 export function ChatPanel({ messages, sendMessage, currentUserId, onClose }: ChatPanelProps) {
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [showEmojis, setShowEmojis] = useState(false);
+  const emojiRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (emojiRef.current && !emojiRef.current.contains(e.target as Node)) {
+        setShowEmojis(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    setInput((prev) => prev + emojiData.emoji);
+  };
 
   const handleSend = () => {
     const trimmed = input.trim();
@@ -84,7 +100,28 @@ export function ChatPanel({ messages, sendMessage, currentUserId, onClose }: Cha
 
       {/* Input */}
       <footer className="flex-shrink-0 border-t border-white/[0.07] p-3">
+        {showEmojis && (
+          <div ref={emojiRef} className="mb-2">
+            <EmojiPicker
+              onEmojiClick={handleEmojiClick}
+              width="100%"
+              height={350}
+              theme={"dark" as any}
+            />
+          </div>
+        )}
         <div className="flex items-center gap-2">
+
+          <button
+            onClick={() => setShowEmojis((prev) => !prev)}
+            className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full transition hover:bg-white/10 cursor-pointer ${
+              showEmojis ? "text-white/80" : "text-white/40"
+            }`}
+            title="Emojis"
+          >
+            <Smile className="h-4 w-4" />
+          </button>
+          
           <input
             type="text"
             value={input}
