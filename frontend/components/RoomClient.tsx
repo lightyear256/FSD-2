@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Mic, MicOff, Video, VideoOff, PhoneOff, MessageSquare, Code2 } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, PhoneOff, MessageSquare, Code2, Monitor } from "lucide-react";
 import { useWebRTC } from "@/hooks/useWebRTC";
 import { useChat } from "@/hooks/useChat";
 import { MediaPanel } from "@/components/MediaPanel";
@@ -55,6 +55,34 @@ function ToolbarBtn({
 export default function RoomClient({ roomId, userId }: RoomClientProps) {
   const router = useRouter();
   const { isConnected, socket } = useSocket();
+
+  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
+
+  const startScreenShare = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: false,
+      });
+      setScreenStream(stream);
+      // Auto-clear when user stops sharing via browser UI
+      stream.getVideoTracks()[0].addEventListener("ended", () => {
+        setScreenStream(null);
+      });
+    } catch {
+      // User cancelled or permission denied — silently ignore
+    }
+  };
+
+  const stopScreenShare = () => {
+    screenStream?.getTracks().forEach((t) => t.stop());
+    setScreenStream(null);
+  };
+
+  const toggleScreenShare = () => {
+    screenStream ? stopScreenShare() : startScreenShare();
+  };
+
 
   const {
     localStream,
@@ -203,6 +231,7 @@ export default function RoomClient({ roomId, userId }: RoomClientProps) {
             <MediaPanel
               localStream={localStream}
               remoteStream={remoteStream}
+              screenStream={screenStream}  
               isVideoEnabled={isVideoEnabled}
             />
           </div>
@@ -277,6 +306,14 @@ export default function RoomClient({ roomId, userId }: RoomClientProps) {
           label="Chat"
         >
           <MessageSquare className="h-4 w-4" />
+        </ToolbarBtn>
+
+        <ToolbarBtn
+          onClick={toggleScreenShare}
+          active={!!screenStream}
+          label={screenStream ? "Stop share" : "Share"}
+        >
+          <Monitor className="h-4 w-4" />
         </ToolbarBtn>
 
         <ToolbarBtn
