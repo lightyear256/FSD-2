@@ -11,16 +11,11 @@ import { signOut } from "next-auth/react";
 // ✅ CopyButton is OUTSIDE DashboardPage
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  
+  
 
   return (
     <button
-      onClick={handleCopy}
       className="shrink-0 rounded-md p-1 text-white/40 transition hover:bg-white/10 hover:text-white/80"
       title="Copy to clipboard"
     >
@@ -34,14 +29,23 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export default function DashboardPage() {
+  const [showToast, setShowToast] = useState(false);
   const router = useRouter();
-
+  const [copied, setCopied] = useState(false);
   const [createdRoomId, setCreatedRoomId] = useState("");
   const [joinRoomId, setJoinRoomId] = useState("");
   const [loading, setLoading] = useState(false);
   const [currentRole, setCurrentRole] = useState("");
   const [roleLoading, setRoleLoading] = useState(true);
 
+  const { data: session } = useSession();
+  const handleCopy = (text: string) => {
+  navigator.clipboard.writeText(text);
+  setCopied(true);
+  setShowToast(true);
+  setTimeout(() => setCopied(false), 2000);
+  setTimeout(() => setShowToast(false), 2000);
+};
   const { data: session, status } = useSession();
 
   useEffect(() => {
@@ -53,11 +57,14 @@ export default function DashboardPage() {
       const token = getToken(session);
       if (!token) return;
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/user/me`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      });
+      );
 
       const user = await res.json();
       setCurrentRole(user.role);
@@ -67,17 +74,20 @@ export default function DashboardPage() {
     init();
   }, [session]);
 
-const handleCreateRoom = async () => {
+  const handleCreateRoom = async () => {
     try {
       setLoading(true);
       const token = getToken(session);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/room/create`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/room/create`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         },
-      });
+      );
 
       const data = await res.json();
       setCreatedRoomId(data.roomId);
@@ -89,7 +99,6 @@ const handleCreateRoom = async () => {
       } catch (clipErr) {
         console.error("❌ Clipboard copy failed:", clipErr);
       }
-
     } catch (err) {
       console.error("Error creating room:", err);
     } finally {
@@ -145,15 +154,19 @@ const handleCreateRoom = async () => {
         <div className="grid gap-5 md:grid-cols-2">
           {currentRole === "INTERVIEWER" && (
             <article className="panel p-6">
-              <p className="mono text-xs uppercase tracking-[0.12em] text-white/50">Interviewer</p>
-              <h2 className="mt-2 text-xl font-medium text-white">Create private room</h2>
+              <p className="mono text-xs uppercase tracking-[0.12em] text-white/50">
+                Interviewer
+              </p>
+              <h2 className="mt-2 text-xl font-medium text-white">
+                Create private room
+              </h2>
               <p className="mt-2 text-sm leading-6 text-white/60">
                 Generate a room and share the ID with one candidate.
               </p>
 
               <button
                 onClick={handleCreateRoom}
-                className="mt-5 rounded-lg bg-white px-4 py-2 text-sm font-medium text-black transition hover:opacity-90 disabled:opacity-50"
+                className="mt-5 rounded-lg bg-white px-4 py-2 text-sm font-medium text-black transition hover:opacity-90 disabled:opacity-50 cursor-pointer"
                 disabled={loading}
               >
                 {loading ? "Creating..." : "Create Room"}
@@ -161,14 +174,18 @@ const handleCreateRoom = async () => {
 
               {createdRoomId && (
                 <div className="mt-5 space-y-3">
-                  <p className="text-xs uppercase tracking-[0.12em] text-white/45">Room ID</p>
-                  <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/2 px-3 py-2">
-                    <span className="flex-1 break-all text-sm text-white/80">{createdRoomId}</span>
-                    <CopyButton text={createdRoomId} />
+                  <p className="text-xs uppercase tracking-[0.12em] text-white/45">
+                    Room ID
+                  </p>
+                  <div onClick={()=>handleCopy(createdRoomId)} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/2 px-3 py-2 cursor-pointer">
+                    <span className="flex-1 break-all text-sm text-white/80">
+                      {createdRoomId}
+                    </span>
+                    <span className="cursor-pointer"><CopyButton text={createdRoomId} /></span>
                   </div>
                   <button
                     onClick={handleEnterCreatedRoom}
-                    className="rounded-lg border border-white/20 px-4 py-2 text-sm text-white transition hover:border-white/35"
+                    className="rounded-lg border border-white/20 px-4 py-2 text-sm text-white transition hover:border-white/35 cursor-pointer"
                   >
                     Enter Room
                   </button>
@@ -179,8 +196,12 @@ const handleCreateRoom = async () => {
 
           {currentRole === "CANDIDATE" && (
             <article className="panel p-6">
-              <p className="mono text-xs uppercase tracking-[0.12em] text-white/50">Candidate</p>
-              <h2 className="mt-2 text-xl font-medium text-white">Join interview room</h2>
+              <p className="mono text-xs uppercase tracking-[0.12em] text-white/50">
+                Candidate
+              </p>
+              <h2 className="mt-2 text-xl font-medium text-white">
+                Join interview room
+              </h2>
               <p className="mt-2 text-sm leading-6 text-white/60">
                 Paste the room ID shared by your interviewer.
               </p>
@@ -203,6 +224,11 @@ const handleCreateRoom = async () => {
           )}
         </div>
       </section>
+      {showToast && (
+  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-lg bg-white/10 backdrop-blur px-4 py-2 text-sm text-white border border-white/15 shadow-lg">
+    ✅ Room ID copied to clipboard!
+  </div>
+)}
     </main>
   );
 }
