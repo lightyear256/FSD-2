@@ -38,81 +38,60 @@ export function MediaPanel({
   }, [remoteStream]);
 
   return (
-    <div className="relative w-full h-full bg-gray-950 flex items-center justify-center overflow-hidden">
-      {/* ── Remote video / waiting state ── */}
+    <div className="relative h-full w-full overflow-hidden bg-[#0a0c0f]">
       {remoteStream ? (
-        <video
-          ref={remoteVideoRef}
-          autoPlay
-          playsInline
-          className="w-full h-full object-cover"
-        />
+        <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-cover" />
       ) : (
-        <div className="flex flex-col items-center gap-4 select-none">
-          <div className="w-24 h-24 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center">
-            <svg
-              className="w-12 h-12 text-gray-500"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
-            </svg>
+        <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/15 bg-white/[0.03] text-white/75">
+            P
           </div>
-          <p className="text-gray-300 font-medium">Waiting for remote user…</p>
-          <div className="flex gap-1.5">
-            {[0, 150, 300].map((delay) => (
-              <span
-                key={delay}
-                className="w-2 h-2 rounded-full bg-blue-500 animate-bounce"
-                style={{ animationDelay: `${delay}ms` }}
-              />
-            ))}
-          </div>
+          <p className="mt-4 text-sm font-medium text-white/80">Peer is joining...</p>
+          <p className="mt-1 text-xs text-white/50">Connection is active. Video will appear shortly.</p>
         </div>
       )}
 
-      {/* ── Local video PiP ── */}
-      <div className="absolute bottom-20 right-4 w-44 h-28 rounded-xl overflow-hidden border border-gray-700 shadow-2xl bg-gray-800">
-        {/* Always attach stream so tracks stay alive */}
+      <div className="absolute left-4 top-4 rounded-full border border-white/10 bg-black/40 px-3 py-1 text-xs text-white/75 backdrop-blur">
+        <span className="mr-1 text-white/45">Participant:</span>
+        Peer
+      </div>
+
+      <div className="absolute bottom-20 right-4 h-28 w-44 overflow-hidden rounded-xl border border-white/20 bg-black/35 shadow-2xl">
         <video
           ref={localVideoRef}
           autoPlay
           playsInline
           muted
-          className="w-full h-full object-cover"
+          className="h-full w-full object-cover"
           style={{ transform: "scaleX(-1)" }}
         />
-        {/* Overlay when video is off */}
         {!isVideoEnabled && (
-          <div className="absolute inset-0 bg-gray-800 flex items-center justify-center">
-            <VideoOff className="w-7 h-7 text-gray-400" />
+          <div className="absolute inset-0 flex items-center justify-center bg-[#111419]">
+            <VideoOff className="h-6 w-6 text-white/50" />
           </div>
         )}
-        <span className="absolute bottom-1 left-2 text-[11px] text-white/80 font-medium">
-          You
-        </span>
+        <div className="absolute bottom-0 left-0 right-0 bg-black/45 px-2 py-1 text-[11px] text-white/75">You</div>
       </div>
 
-      {/* ── Controls ── */}
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-3">
+      <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border border-white/15 bg-black/55 p-2 backdrop-blur-md">
         <ControlButton
           active={isAudioEnabled}
           onClick={toggleAudio}
-          icon={isAudioEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+          icon={isAudioEnabled ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
           label={isAudioEnabled ? "Mute" : "Unmute"}
         />
         <ControlButton
           active={isVideoEnabled}
           onClick={toggleVideo}
-          icon={isVideoEnabled ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
+          icon={isVideoEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
           label={isVideoEnabled ? "Stop video" : "Start video"}
         />
         <button
           onClick={onLeaveRoom}
           title="Leave room"
-          className="w-12 h-12 rounded-full bg-red-600 hover:bg-red-500 active:scale-95 flex items-center justify-center transition-all shadow-lg"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--danger)] text-white transition hover:opacity-90"
         >
-          <PhoneOff className="w-5 h-5" />
+          <PhoneOff className="h-4 w-4" />
         </button>
       </div>
     </div>
@@ -134,10 +113,8 @@ function ControlButton({
     <button
       onClick={onClick}
       title={label}
-      className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-lg ${
-        active
-          ? "bg-gray-700 hover:bg-gray-600"
-          : "bg-red-600/90 hover:bg-red-500"
+      className={`flex h-10 w-10 items-center justify-center rounded-full transition ${
+        active ? "bg-white/20 text-white hover:bg-white/30" : "bg-white/10 text-white/80 hover:bg-white/20"
       }`}
     >
       {icon}
