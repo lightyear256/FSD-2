@@ -4,6 +4,32 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { getToken } from "@/app/lib/getToken";
+import { Copy, Check } from "lucide-react";
+
+// ✅ CopyButton is OUTSIDE DashboardPage
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="shrink-0 rounded-md p-1 text-white/40 transition hover:bg-white/10 hover:text-white/80"
+      title="Copy to clipboard"
+    >
+      {copied ? (
+        <Check className="h-4 w-4 text-green-400" />
+      ) : (
+        <Copy className="h-4 w-4" />
+      )}
+    </button>
+  );
+}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -28,19 +54,17 @@ export default function DashboardPage() {
       });
 
       const user = await res.json();
-      const role = user.role;
-      setCurrentRole(role);
+      setCurrentRole(user.role);
       setRoleLoading(false);
     };
 
     init();
   }, [session]);
 
-  const handleCreateRoom = async () => {
+const handleCreateRoom = async () => {
     try {
       setLoading(true);
       const token = getToken(session);
-      console.log(token);
       const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/room/create`, {
         method: "POST",
         headers: {
@@ -50,10 +74,16 @@ export default function DashboardPage() {
       });
 
       const data = await res.json();
-
       setCreatedRoomId(data.roomId);
 
-      navigator.clipboard.writeText(data.roomId);
+      // ✅ auto copy with error handling
+      try {
+        await navigator.clipboard.writeText(data.roomId);
+        console.log("✅ Room ID copied to clipboard:", data.roomId);
+      } catch (clipErr) {
+        console.error("❌ Clipboard copy failed:", clipErr);
+      }
+
     } catch (err) {
       console.error("Error creating room:", err);
     } finally {
@@ -95,7 +125,9 @@ export default function DashboardPage() {
             <article className="panel p-6">
               <p className="mono text-xs uppercase tracking-[0.12em] text-white/50">Interviewer</p>
               <h2 className="mt-2 text-xl font-medium text-white">Create private room</h2>
-              <p className="mt-2 text-sm leading-6 text-white/60">Generate a room and share the ID with one candidate.</p>
+              <p className="mt-2 text-sm leading-6 text-white/60">
+                Generate a room and share the ID with one candidate.
+              </p>
 
               <button
                 onClick={handleCreateRoom}
@@ -108,8 +140,9 @@ export default function DashboardPage() {
               {createdRoomId && (
                 <div className="mt-5 space-y-3">
                   <p className="text-xs uppercase tracking-[0.12em] text-white/45">Room ID</p>
-                  <div className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-sm text-white/80 break-all">
-                    {createdRoomId}
+                  <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/2 px-3 py-2">
+                    <span className="flex-1 break-all text-sm text-white/80">{createdRoomId}</span>
+                    <CopyButton text={createdRoomId} />
                   </div>
                   <button
                     onClick={handleEnterCreatedRoom}
@@ -126,14 +159,16 @@ export default function DashboardPage() {
             <article className="panel p-6">
               <p className="mono text-xs uppercase tracking-[0.12em] text-white/50">Candidate</p>
               <h2 className="mt-2 text-xl font-medium text-white">Join interview room</h2>
-              <p className="mt-2 text-sm leading-6 text-white/60">Paste the room ID shared by your interviewer.</p>
+              <p className="mt-2 text-sm leading-6 text-white/60">
+                Paste the room ID shared by your interviewer.
+              </p>
 
               <input
                 type="text"
                 placeholder="Enter Room ID"
                 value={joinRoomId}
                 onChange={(e) => setJoinRoomId(e.target.value)}
-                className="mt-5 w-full rounded-lg border border-white/15 bg-white/[0.02] px-4 py-2.5 text-sm text-white outline-none placeholder:text-white/35 focus:border-white/30"
+                className="mt-5 w-full rounded-lg border border-white/15 bg-white/2 px-4 py-2.5 text-sm text-white outline-none placeholder:text-white/35 focus:border-white/30"
               />
 
               <button
