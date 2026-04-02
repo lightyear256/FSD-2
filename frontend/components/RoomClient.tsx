@@ -65,18 +65,23 @@ export default function RoomClient({ roomId, userId }: RoomClientProps) {
         audio: false,
       });
       setScreenStream(stream);
-      // Auto-clear when user stops sharing via browser UI
+
+      // ✅ Send screen track to peer
+      await replaceVideoTrack(stream.getVideoTracks()[0]);
+
       stream.getVideoTracks()[0].addEventListener("ended", () => {
         setScreenStream(null);
+        replaceVideoTrack(null); // ✅ Restore camera
       });
     } catch {
-      // User cancelled or permission denied — silently ignore
+      // cancelled
     }
   };
 
   const stopScreenShare = () => {
-    screenStream?.getTracks().forEach((t) => t.stop());
+    screenStream?.getTracks().forEach(t => t.stop());
     setScreenStream(null);
+    replaceVideoTrack(null); 
   };
 
   const toggleScreenShare = () => {
@@ -94,6 +99,7 @@ export default function RoomClient({ roomId, userId }: RoomClientProps) {
     toggleVideo,
     toggleAudio,
     cleanup,
+    replaceVideoTrack ,
   } = useWebRTC(roomId, userId);
 
   const { messages, sendMessage } = useChat(roomId, userId);

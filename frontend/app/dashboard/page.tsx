@@ -38,7 +38,6 @@ export default function DashboardPage() {
   const [currentRole, setCurrentRole] = useState("");
   const [roleLoading, setRoleLoading] = useState(true);
 
-  const { data: session } = useSession();
   const handleCopy = (text: string) => {
   navigator.clipboard.writeText(text);
   setCopied(true);
