@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { getToken } from "@/app/lib/getToken";
 import { Copy, Check } from "lucide-react";
+import { signOut } from "next-auth/react";
+
 
 // ✅ CopyButton is OUTSIDE DashboardPage
 function CopyButton({ text }: { text: string }) {
@@ -40,7 +42,11 @@ export default function DashboardPage() {
   const [currentRole, setCurrentRole] = useState("");
   const [roleLoading, setRoleLoading] = useState(true);
 
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+
+  useEffect(() => {
+    if (status === "unauthenticated") router.push("/auth");
+  }, [status]);
 
   useEffect(() => {
     const init = async () => {
@@ -101,6 +107,13 @@ const handleCreateRoom = async () => {
     router.push(`/room/${joinRoomId}`);
   };
 
+
+  const handleLogout = () => {
+    // Clear any locally stored JWT if you persist it
+    localStorage.removeItem("token"); // adjust key to match yours
+    signOut({ callbackUrl: "/login" });
+  };
+
   if (roleLoading) {
     return (
       <div className="page-shell flex min-h-screen items-center justify-center">
@@ -115,10 +128,19 @@ const handleCreateRoom = async () => {
   return (
     <main className="page-shell flex min-h-screen items-center justify-center px-6 py-12">
       <section className="w-full max-w-5xl">
-        <div className="mb-6">
-          <p className="mono text-xs uppercase tracking-[0.14em] text-white/55">Dashboard</p>
-          <h1 className="mt-2 text-3xl font-medium text-white">Interview control center</h1>
-        </div>
+        
+        <div className="mb-6 flex items-center justify-between">
+  <div>
+    <p className="mono text-xs uppercase tracking-[0.14em] text-white/55">Dashboard</p>
+    <h1 className="mt-2 text-3xl font-medium text-white">Interview control center</h1>
+  </div>
+  <button
+    onClick={() => signOut({ callbackUrl: "/auth" })}
+    className="rounded-lg border border-white/15 px-4 py-2 text-sm text-white/70 transition hover:border-white/30 hover:text-white"
+  >
+    Sign out
+  </button>
+</div>
 
         <div className="grid gap-5 md:grid-cols-2">
           {currentRole === "INTERVIEWER" && (
