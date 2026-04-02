@@ -26,43 +26,34 @@ export function ChatPanel({ messages, sendMessage, currentUserId }: ChatPanelPro
   };
 
   return (
-    <div className="w-full md:w-72 lg:w-80 flex flex-col border-t md:border-t-0 md:border-l border-gray-800 bg-gray-950 h-56 md:h-full flex-shrink-0">
-      {/* Header */}
-      <div className="h-12 px-4 flex items-center border-b border-gray-800 flex-shrink-0">
-        <h2 className="text-sm font-semibold text-gray-300">Chat</h2>
+    <aside className="panel flex h-[44vh] w-full flex-shrink-0 flex-col overflow-hidden lg:h-full lg:w-[330px]">
+      <header className="flex h-14 items-center justify-between border-b border-white/10 px-4">
+        <h2 className="text-sm font-medium text-white">Chat</h2>
         {messages.length > 0 && (
-          <span className="ml-2 text-xs bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center">
+          <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-xs text-white/60">
             {messages.length}
           </span>
         )}
-      </div>
+      </header>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {messages.length === 0 ? (
-          <p className="text-gray-600 text-sm text-center mt-8">
-            No messages yet
-          </p>
+          <p className="pt-6 text-center text-sm text-white/45">No messages yet</p>
         ) : (
           messages.map((msg, i) => {
             const isOwn = msg.userId === currentUserId;
             return (
-              <div
-                key={i}
-                className={`flex flex-col gap-0.5 ${isOwn ? "items-end" : "items-start"}`}
-              >
+              <div key={i} className={`flex flex-col gap-1 ${isOwn ? "items-end" : "items-start"}`}>
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-snug break-words ${
+                  className={`max-w-[86%] rounded-2xl px-3 py-2 text-sm leading-snug break-words ${
                     isOwn
-                      ? "bg-blue-600 text-white rounded-br-sm"
-                      : "bg-gray-800 text-gray-100 rounded-bl-sm"
+                      ? "rounded-br-sm bg-[var(--accent)] text-black"
+                      : "rounded-bl-sm border border-white/10 bg-white/[0.03] text-white/85"
                   }`}
                 >
                   {msg.message}
                 </div>
-                <span className="text-[11px] text-gray-600">
-                  {isOwn ? "You" : "Peer"}
-                </span>
+                <span className="text-[11px] text-white/40">{isOwn ? "You" : "Peer"}</span>
               </div>
             );
           })
@@ -70,26 +61,25 @@ export function ChatPanel({ messages, sendMessage, currentUserId }: ChatPanelPro
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
-      <div className="p-3 border-t border-gray-800 flex-shrink-0">
+      <footer className="border-t border-white/10 p-3">
         <div className="flex items-center gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder="Message…"
-            className="flex-1 bg-gray-800 text-white text-sm rounded-full px-4 py-2 outline-none placeholder-gray-600 focus:ring-1 focus:ring-blue-500 transition-shadow"
+            placeholder="Message"
+            className="w-full rounded-full border border-white/15 bg-white/[0.02] px-4 py-2 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-white/30"
           />
           <button
             onClick={handleSend}
             disabled={!input.trim()}
-            className="w-9 h-9 rounded-full bg-blue-600 hover:bg-blue-500 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center flex-shrink-0 transition-all active:scale-95"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-35"
           >
-            <Send className="w-4 h-4" />
+            <Send className="h-4 w-4" />
           </button>
         </div>
-      </div>
-    </div>
+      </footer>
+    </aside>
   );
 }

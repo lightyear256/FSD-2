@@ -7,35 +7,34 @@ import { getToken } from "@/app/lib/getToken";
 
 export default function DashboardPage() {
   const router = useRouter();
-  
+
   const [createdRoomId, setCreatedRoomId] = useState("");
   const [joinRoomId, setJoinRoomId] = useState("");
   const [loading, setLoading] = useState(false);
   const [currentRole, setCurrentRole] = useState("");
   const [roleLoading, setRoleLoading] = useState(true);
-  
+
   const { data: session } = useSession();
 
   useEffect(() => {
-  const init = async () => {
-    const token = getToken(session);
-    if (!token) return;
+    const init = async () => {
+      const token = getToken(session);
+      if (!token) return;
 
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user/me`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    
-    const user = await res.json();
-    const role = user.role;
-    setCurrentRole(role);
-    setRoleLoading(false);
-  };
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/user/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-  init();
-}, [session]);
+      const user = await res.json();
+      const role = user.role;
+      setCurrentRole(role);
+      setRoleLoading(false);
+    };
 
+    init();
+  }, [session]);
 
   const handleCreateRoom = async () => {
     try {
@@ -46,7 +45,7 @@ export default function DashboardPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -62,13 +61,11 @@ export default function DashboardPage() {
     }
   };
 
-  // 🔹 Enter Created Room
   const handleEnterCreatedRoom = () => {
     if (!createdRoomId) return;
     router.push(`/room/${createdRoomId}`);
   };
 
-  // 🔹 Join Existing Room
   const handleJoinRoom = () => {
     if (!joinRoomId.trim()) return;
     router.push(`/room/${joinRoomId}`);
@@ -76,72 +73,79 @@ export default function DashboardPage() {
 
   if (roleLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-white">
-        Loading dashboard...
+      <div className="page-shell flex min-h-screen items-center justify-center">
+        <div className="flex items-center gap-3 text-white/70">
+          <span className="h-4 w-4 animate-spin rounded-full border border-white/30 border-t-white" />
+          Loading dashboard...
+        </div>
       </div>
     );
-  } 
+  }
+
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
-      <div className="w-full max-w-4xl grid md:grid-cols-2 gap-8">
+    <main className="page-shell flex min-h-screen items-center justify-center px-6 py-12">
+      <section className="w-full max-w-5xl">
+        <div className="mb-6">
+          <p className="mono text-xs uppercase tracking-[0.14em] text-white/55">Dashboard</p>
+          <h1 className="mt-2 text-3xl font-medium text-white">Interview control center</h1>
+        </div>
 
-        {currentRole === "INTERVIEWER" && (
-          <div className="bg-gray-900 p-6 rounded-xl border border-gray-800 shadow-lg flex flex-col gap-4">
-            <h2 className="text-2xl font-bold text-green-400">
-              Create Room (Interviewer)
-            </h2>
+        <div className="grid gap-5 md:grid-cols-2">
+          {currentRole === "INTERVIEWER" && (
+            <article className="panel p-6">
+              <p className="mono text-xs uppercase tracking-[0.12em] text-white/50">Interviewer</p>
+              <h2 className="mt-2 text-xl font-medium text-white">Create private room</h2>
+              <p className="mt-2 text-sm leading-6 text-white/60">Generate a room and share the ID with one candidate.</p>
 
-            <button
-              onClick={handleCreateRoom}
-              className="px-4 py-2 bg-green-600 rounded-lg"
-              disabled={loading}
-            >
-              {loading ? "Creating..." : "Create Room"}
-            </button>
+              <button
+                onClick={handleCreateRoom}
+                className="mt-5 rounded-lg bg-white px-4 py-2 text-sm font-medium text-black transition hover:opacity-90 disabled:opacity-50"
+                disabled={loading}
+              >
+                {loading ? "Creating..." : "Create Room"}
+              </button>
 
-            {createdRoomId && (
-              <div className="flex flex-col gap-3 mt-2">
-                <p className="text-sm text-gray-400">Room ID:</p>
-
-                <div className="bg-gray-800 px-3 py-2 rounded break-all">
-                  {createdRoomId}
+              {createdRoomId && (
+                <div className="mt-5 space-y-3">
+                  <p className="text-xs uppercase tracking-[0.12em] text-white/45">Room ID</p>
+                  <div className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-sm text-white/80 break-all">
+                    {createdRoomId}
+                  </div>
+                  <button
+                    onClick={handleEnterCreatedRoom}
+                    className="rounded-lg border border-white/20 px-4 py-2 text-sm text-white transition hover:border-white/35"
+                  >
+                    Enter Room
+                  </button>
                 </div>
+              )}
+            </article>
+          )}
 
-                <button
-                  onClick={handleEnterCreatedRoom}
-                  className="px-4 py-2 bg-blue-600 rounded-lg"
-                >
-                  Enter Room
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+          {currentRole === "CANDIDATE" && (
+            <article className="panel p-6">
+              <p className="mono text-xs uppercase tracking-[0.12em] text-white/50">Candidate</p>
+              <h2 className="mt-2 text-xl font-medium text-white">Join interview room</h2>
+              <p className="mt-2 text-sm leading-6 text-white/60">Paste the room ID shared by your interviewer.</p>
 
-        {currentRole === "CANDIDATE" && (
-          <div className="bg-gray-900 p-6 rounded-xl border border-gray-800 shadow-lg flex flex-col gap-4">
-            <h2 className="text-2xl font-bold text-blue-400">
-              Join Room (Candidate)
-            </h2>
+              <input
+                type="text"
+                placeholder="Enter Room ID"
+                value={joinRoomId}
+                onChange={(e) => setJoinRoomId(e.target.value)}
+                className="mt-5 w-full rounded-lg border border-white/15 bg-white/[0.02] px-4 py-2.5 text-sm text-white outline-none placeholder:text-white/35 focus:border-white/30"
+              />
 
-            <input
-              type="text"
-              placeholder="Enter Room ID"
-              value={joinRoomId}
-              onChange={(e) => setJoinRoomId(e.target.value)}
-              className="px-4 py-2 rounded bg-gray-800 border border-gray-700"
-            />
-
-            <button
-              onClick={handleJoinRoom}
-              className="px-4 py-2 bg-blue-600 rounded-lg"
-            >
-              Join Room
-            </button>
-          </div>
-        )}
-
-      </div>
-    </div>
+              <button
+                onClick={handleJoinRoom}
+                className="mt-3 rounded-lg bg-white px-4 py-2 text-sm font-medium text-black transition hover:opacity-90"
+              >
+                Join Room
+              </button>
+            </article>
+          )}
+        </div>
+      </section>
+    </main>
   );
 }

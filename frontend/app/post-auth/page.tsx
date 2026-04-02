@@ -3,13 +3,11 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-// import { useSearchParams } from "next/navigation";
 import { getToken } from "@/app/lib/getToken";
 
 export default function PostAuthPage() {
   const { data: session } = useSession();
   const router = useRouter();
-  // const searchParams = useSearchParams();
 
   useEffect(() => {
     const checkUser = async () => {
@@ -23,22 +21,21 @@ export default function PostAuthPage() {
       });
 
       const user = await res.json();
-       console.log("3. user from /me:", user);
+      console.log("3. user from /me:", user);
       console.log("4. user.role:", user.role);
 
       if (user.role) {
-         console.log("✅ Role exists, going to dashboard");
+        console.log("✅ Role exists, going to dashboard");
         localStorage.removeItem("selectedRole");
         router.push("/dashboard");
         return;
       }
-      //  const roleFromUrl = searchParams.get("role");
+
       const roleFromStorage = localStorage.getItem("selectedRole");
 
-      // console.log("5. role from URL:", roleFromUrl);
       console.log("6. role from localStorage:", roleFromStorage);
 
-      const role =  roleFromStorage;
+      const role = roleFromStorage;
       console.log("7. final role to set:", role);
 
       if (!role) {
@@ -54,7 +51,7 @@ export default function PostAuthPage() {
         },
         body: JSON.stringify({ role }),
       });
-        const setRoleData = await setRoleRes.json();
+      const setRoleData = await setRoleRes.json();
       console.log("8. set-role response:", setRoleData);
       localStorage.removeItem("selectedRole");
       router.push("/dashboard");
@@ -64,8 +61,11 @@ export default function PostAuthPage() {
   }, [session]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black text-white">
-      <p>Setting up your account...</p>
-    </div>
+    <main className="page-shell flex min-h-screen items-center justify-center px-6">
+      <div className="panel w-full max-w-md p-8 text-center">
+        <div className="mx-auto h-6 w-6 animate-spin rounded-full border border-white/30 border-t-white" />
+        <p className="mt-4 text-sm text-white/70">Setting up your account...</p>
+      </div>
+    </main>
   );
 }
