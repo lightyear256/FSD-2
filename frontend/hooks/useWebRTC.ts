@@ -173,6 +173,26 @@ export function useWebRTC(roomId: string, userId: string) {
     socket?.off("user-connected");
   }, [closePeer, socket]);
 
+  const replaceVideoTrack = useCallback(async (newTrack: MediaStreamTrack | null) => {
+    const call = currentCallRef.current;
+    if (!call) return;
+
+    // Access the underlying RTCPeerConnection from PeerJS
+    const pc = (call as any).peerConnection as RTCPeerConnection;
+    if (!pc) return;
+
+    const videoSender = pc.getSenders().find(s => s.track?.kind === "video");
+    if (!videoSender) return;
+
+    if (newTrack) {
+      await videoSender.replaceTrack(newTrack);
+    } else {
+      // Restore original camera track
+      const camTrack = localStreamRef.current?.getVideoTracks()[0] ?? null;
+      await videoSender.replaceTrack(camTrack);
+    }
+  }, []);
+
   return {
     localStream,
     remoteStream,
@@ -183,5 +203,6 @@ export function useWebRTC(roomId: string, userId: string) {
     toggleVideo,
     toggleAudio,
     cleanup,
+    replaceVideoTrack,
   };
 }
