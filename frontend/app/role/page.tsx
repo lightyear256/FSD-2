@@ -25,7 +25,7 @@ export default function RolePage() {
         <div className="mt-8 grid gap-3 sm:grid-cols-2">
           <button
             onClick={() => handleSelectRole("INTERVIEWER")}
-            className="rounded-xl border border-white/10 bg-white/[0.02] px-5 py-5 text-left transition hover:border-white/20 hover:bg-white/[0.04]"
+            className="rounded-xl border border-white/10 bg-white/[0.02] px-5 py-5 text-left transition hover:border-white/20 hover:bg-white/[0.04] cursor-pointer"
           >
             <p className="text-base font-medium text-white">Interviewer</p>
             <p className="mt-1 text-sm leading-6 text-white/60">Create private rooms and host technical sessions.</p>
@@ -33,7 +33,7 @@ export default function RolePage() {
 
           <button
             onClick={() => handleSelectRole("CANDIDATE")}
-            className="rounded-xl border border-white/10 bg-white/[0.02] px-5 py-5 text-left transition hover:border-white/20 hover:bg-white/[0.04]"
+            className="rounded-xl border border-white/10 bg-white/[0.02] px-5 py-5 text-left transition hover:border-white/20 hover:bg-white/[0.04] cursor-pointer"
           >
             <p className="text-base font-medium text-white">Candidate</p>
             <p className="mt-1 text-sm leading-6 text-white/60">Join interview rooms and collaborate in real time.</p>

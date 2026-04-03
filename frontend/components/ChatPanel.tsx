@@ -11,7 +11,12 @@ interface ChatPanelProps {
   onClose?: () => void;
 }
 
-export function ChatPanel({ messages, sendMessage, currentUserId, onClose }: ChatPanelProps) {
+export function ChatPanel({
+  messages,
+  sendMessage,
+  currentUserId,
+  onClose,
+}: ChatPanelProps) {
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const [showEmojis, setShowEmojis] = useState(false);
@@ -47,7 +52,9 @@ export function ChatPanel({ messages, sendMessage, currentUserId, onClose }: Cha
       {/* Header */}
       <header className="flex h-11 flex-shrink-0 items-center justify-between border-b border-white/[0.07] px-4">
         <div className="flex items-center gap-2">
-          <h2 className="text-xs font-medium text-white/70">In-call messages</h2>
+          <h2 className="text-xs font-medium text-white/70">
+            In-call messages
+          </h2>
           {messages.length > 0 && (
             <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[11px] text-white/50">
               {messages.length}
@@ -57,7 +64,7 @@ export function ChatPanel({ messages, sendMessage, currentUserId, onClose }: Cha
         {onClose && (
           <button
             onClick={onClose}
-            className="flex h-6 w-6 items-center justify-center rounded-lg text-white/40 transition hover:bg-white/[0.06] hover:text-white/70"
+            className="flex h-6 w-6 items-center justify-center rounded-lg text-white/40 transition hover:bg-white/[0.06] hover:text-white/70 cursor-pointer"
             title="Close chat"
           >
             <X className="h-3.5 w-3.5" />
@@ -68,20 +75,28 @@ export function ChatPanel({ messages, sendMessage, currentUserId, onClose }: Cha
       {/* Notice — messages only visible during call */}
       <div className="flex-shrink-0 border-b border-white/[0.05] bg-white/[0.02] px-4 py-2">
         <p className="text-[11px] leading-relaxed text-white/30">
-          Messages are only visible to people in the call and are deleted when the call ends.
+          Messages are only visible to people in the call and are deleted when
+          the call ends.
         </p>
       </div>
 
       {/* Messages */}
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3">
         {messages.length === 0 ? (
-          <p className="pt-6 text-center text-xs text-white/35">No messages yet</p>
+          <p className="pt-6 text-center text-xs text-white/35">
+            No messages yet
+          </p>
         ) : (
           messages.map((msg, i) => {
             const isOwn = msg.userId === currentUserId;
             return (
-              <div key={i} className={`flex flex-col gap-0.5 ${isOwn ? "items-end" : "items-start"}`}>
-                <span className="px-1 text-[10px] text-white/35">{isOwn ? "You" : "Peer"}</span>
+              <div
+                key={i}
+                className={`flex flex-col gap-0.5 ${isOwn ? "items-end" : "items-start"}`}
+              >
+                <span className="px-1 text-[10px] text-white/35">
+                  {isOwn ? "You" : "Peer"}
+                </span>
                 <div
                   className={`max-w-[88%] rounded-2xl px-3 py-1.5 text-sm leading-snug break-words ${
                     isOwn
@@ -111,17 +126,16 @@ export function ChatPanel({ messages, sendMessage, currentUserId, onClose }: Cha
           </div>
         )}
         <div className="flex items-center gap-2">
-
           <button
             onClick={() => setShowEmojis((prev) => !prev)}
             className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full transition hover:bg-white/10 cursor-pointer ${
-              showEmojis ? "text-white/80" : "text-white/40"
+              showEmojis ? "text-white/80" : "text-white/40 cursor-pointer"
             }`}
             title="Emojis"
           >
             <Smile className="h-4 w-4" />
           </button>
-          
+
           <input
             type="text"
             value={input}
@@ -133,7 +147,7 @@ export function ChatPanel({ messages, sendMessage, currentUserId, onClose }: Cha
           <button
             onClick={handleSend}
             disabled={!input.trim()}
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
+            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30 cursor-pointer"
           >
             <Send className="h-3.5 w-3.5" />
           </button>

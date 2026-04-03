@@ -58,7 +58,7 @@ export function CodePanel({ code, onChange }: CodePanelProps) {
           <button
             onClick={handleCopy}
             title="Copy all"
-            className="flex h-7 w-7 items-center justify-center rounded-md text-white/40 transition hover:bg-white/[0.06] hover:text-white/70"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-white/40 transition hover:bg-white/[0.06] hover:text-white/70 cursor-pointer"
           >
             {copied
               ? <Check className="h-3.5 w-3.5 text-emerald-400" />
@@ -67,7 +67,7 @@ export function CodePanel({ code, onChange }: CodePanelProps) {
           <button
             onClick={handleClear}
             title="Clear"
-            className="flex h-7 w-7 items-center justify-center rounded-md text-white/40 transition hover:bg-white/[0.06] hover:text-rose-400"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-white/40 transition hover:bg-white/[0.06] hover:text-rose-400 cursor-pointer"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>

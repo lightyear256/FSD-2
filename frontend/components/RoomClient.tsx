@@ -36,7 +36,7 @@ function ToolbarBtn({
       onClick={onClick}
       title={label}
       className={[
-        "flex flex-col items-center gap-1 rounded-2xl px-3 py-2 transition-all active:scale-95",
+        "flex flex-col items-center gap-1 rounded-2xl px-3 py-2 transition-all active:scale-95 cursor-pointer",
         danger
           ? "bg-rose-500/90 text-white hover:bg-rose-500"
           : active
@@ -170,7 +170,7 @@ export default function RoomClient({ roomId, userId }: RoomClientProps) {
           </p>
           <button
             onClick={() => router.push("/dashboard")}
-            className="mt-6 rounded-lg bg-white px-4 py-2 text-sm font-medium text-black transition hover:opacity-90"
+            className="mt-6 rounded-lg bg-white px-4 py-2 text-sm font-medium text-black transition hover:opacity-90 cursor-pointer"
           >
             Return to dashboard
           </button>
