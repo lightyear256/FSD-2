@@ -50,7 +50,6 @@ jobs:
           key: ${{ secrets.AWS_PRIVATE_KEY }}
           port: 22
           script: |
-          
             docker pull ${{ secrets.DOCKER_USERNAME }}/fsd2-backend:latest
             docker stop fsd2-backend || true
             docker rm fsd2-backend || true
@@ -59,4 +58,5 @@ jobs:
               --env-file /home/ec2-user/backend.env \
               --restart unless-stopped \
               ${{ secrets.DOCKER_USERNAME }}/fsd2-backend:latest
+            docker image prune -f
             sleep 5
