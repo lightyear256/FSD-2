@@ -10,7 +10,7 @@ app.use(express.json());
 app.use(cors());
 
 app.get("/",(req:Request,res:Response)=>{
-    res.json("server running")
+    res.json("server is running")
 })
 app.use("/user",userRouter);
 app.use("/room", roomRouter);
