@@ -48,7 +48,7 @@ export default function JoinPage() {
           <button
             type="submit"
             disabled={!canJoin}
-            className="w-full rounded-lg bg-white px-5 py-3 text-sm font-medium text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-lg bg-white px-5 py-3 text-sm font-medium text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
           >
             Join Room
           </button>

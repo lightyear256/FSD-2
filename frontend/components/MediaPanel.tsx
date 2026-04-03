@@ -106,7 +106,7 @@ export function MediaPanel({
       <button
         onClick={handleSwap}
         title="Click to swap view"
-        className="group absolute bottom-4 right-4 h-[5.5rem] w-36 overflow-hidden rounded-xl border border-white/20 bg-[#0d1014] shadow-2xl transition-transform hover:scale-[1.03] active:scale-[0.97]"
+        className="group absolute bottom-4 right-4 h-[5.5rem] w-36 overflow-hidden rounded-xl border border-white/20 bg-[#0d1014] shadow-2xl transition-transform hover:scale-[1.03] active:scale-[0.97] cursor-pointer"
       >
         {pipHasVideo ? (
           <video
