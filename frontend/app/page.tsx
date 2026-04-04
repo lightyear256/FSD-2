@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 const features = [
@@ -25,11 +26,9 @@ export default function HomePage() {
       <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 pb-10 pt-8 sm:px-8">
         <header className="flex items-center justify-between border-b border-white/10 pb-5">
           <div className="flex items-center gap-3">
-            <div className="h-7 w-7 rounded-md bg-white/90 text-black flex items-center justify-center text-xs font-semibold">
-              PR
-            </div>
+            <Image src={"/test.jpeg"} height={40} width={40} alt="logo"/>
             <p className="mono text-sm tracking-tight text-white/95">
-              PeerRoom
+              Artemis
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -57,7 +56,7 @@ export default function HomePage() {
               Interview rooms designed for clarity, speed, and trust.
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-7 text-white/65 sm:text-lg">
-              PeerRoom brings video, chat, and role-based interview flow into
+              Artemis brings video, chat, and role-based interview flow into
               one minimal workspace that feels calm under pressure.
             </p>
 

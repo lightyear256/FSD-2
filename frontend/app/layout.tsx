@@ -14,8 +14,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PeerRoom",
+  title: "Artemis",
   description: "Minimal 1:1 technical interview platform",
+  icons:{
+    icon:"/test.jpeg"
+  },
 };
 
 export default function RootLayout({
